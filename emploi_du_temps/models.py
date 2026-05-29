@@ -79,20 +79,15 @@ class Option(models.Model):
 
 
 class Cours(models.Model):
-
-    codeCours = models.CharField(max_length=30, primary_key=True)
-    intitule = models.CharField(max_length=200)
-    volumeHoraire = models.PositiveIntegerField()
-    option = models.ForeignKey(Option, on_delete=models.PROTECT, related_name="cours")
-
-    class Meta:
-        ordering = ["codeCours"]
-        verbose_name = "cours"
-        verbose_name_plural = "cours"
-
-    def __str__(self) -> str:
-        return f"{self.codeCours} - {self.intitule}"
-
+    codeCours = models.CharField("code du cours", max_length=30, primary_key=True)
+    intitule = models.CharField("intitulé", max_length=200)
+    volumeHoraire = models.PositiveIntegerField("volume horaire")
+    option = models.ForeignKey(
+        Option,
+        on_delete=models.PROTECT,
+        related_name="cours",
+        verbose_name="option",
+    )
 
 class Salle(models.Model):
 
@@ -160,9 +155,8 @@ class EmploiDuTemps(models.Model):
     def __str__(self) -> str:
         return f"{self.option} - semaine du {self.semaine} ({self.get_statut_display()})"
 
-
 class Creneau(models.Model):
-
+    
     class Jour(models.TextChoices):
         LUNDI = "LUNDI", "Lundi"
         MARDI = "MARDI", "Mardi"
@@ -170,23 +164,42 @@ class Creneau(models.Model):
         JEUDI = "JEUDI", "Jeudi"
         VENDREDI = "VENDREDI", "Vendredi"
         SAMEDI = "SAMEDI", "Samedi"
-
+        
     emploiDuTemps = models.ForeignKey(
-        EmploiDuTemps, on_delete=models.CASCADE, related_name="creneaux"
+        EmploiDuTemps,
+        on_delete=models.CASCADE,
+        related_name="creneaux",
+        verbose_name="emploi du temps",
     )
-    jour = models.CharField(max_length=20, choices=Jour.choices)
-    heureDebut = models.TimeField()
-    heureFin = models.TimeField()
-    cours = models.ForeignKey(Cours, on_delete=models.PROTECT, related_name="creneaux")
+    jour = models.CharField("jour", max_length=20, choices=Jour.choices)
+    heureDebut = models.TimeField("heure de début")
+    heureFin = models.TimeField("heure de fin")
+    cours = models.ForeignKey(
+        Cours,
+        on_delete=models.PROTECT,
+        related_name="creneaux",
+        verbose_name="cours",
+    )
     enseignant = models.ForeignKey(
         Utilisateur,
         on_delete=models.PROTECT,
         related_name="creneauxEnseignes",
         limit_choices_to={"role": Utilisateur.Role.ENSEIGNANT},
+        verbose_name="enseignant",
     )
-    salle = models.ForeignKey(Salle, on_delete=models.PROTECT, related_name="creneaux")
-    option = models.ForeignKey(Option, on_delete=models.PROTECT, related_name="creneaux")
-
+    salle = models.ForeignKey(
+        Salle,
+        on_delete=models.PROTECT,
+        related_name="creneaux",
+        verbose_name="salle",
+    )
+    option = models.ForeignKey(
+        Option,
+        on_delete=models.PROTECT,
+        related_name="creneaux",
+        verbose_name="option",
+    )
+    
     class Meta:
         ordering = ["jour", "heureDebut"]
         constraints = [
