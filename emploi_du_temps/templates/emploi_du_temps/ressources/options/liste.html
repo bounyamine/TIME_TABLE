@@ -1,0 +1,52 @@
+{% extends "emploi_du_temps/base.html" %}
+
+{% block titre %}Options — EDT ENSPM{% endblock %}
+
+{% block contenu %}
+<div class="page-header">
+  <div>
+    <h1>🎓 Options</h1>
+    <p>{{ options.count }} option{{ options.count|pluralize }} enregistrée{{ options.count|pluralize }}</p>
+  </div>
+  <a href="{% url 'option_creer' %}" class="btn btn-vert">+ Nouvelle option</a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2>Liste des options (filières)</h2>
+  </div>
+  {% if options %}
+  <table>
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>Niveau</th>
+        <th>Nb cours</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for o in options %}
+      <tr>
+        <td><strong>{{ o.nom }}</strong></td>
+        <td><span class="badge badge-bleu">Niveau {{ o.niveau }}</span></td>
+        <td><span class="badge badge-vert">{{ o.cours.count }} cours</span></td>
+        <td>
+          <div class="td-actions">
+            <a href="{% url 'option_modifier' o.pk %}" class="btn btn-bleu btn-sm">✏️ Modifier</a>
+            <a href="{% url 'option_supprimer' o.pk %}" class="btn btn-rouge btn-sm">🗑️ Supprimer</a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="vide">
+    <div class="vide-icon">🎓</div>
+    <p>Aucune option enregistrée pour le moment.</p>
+    <a href="{% url 'option_creer' %}" class="btn btn-vert">+ Ajouter une option</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

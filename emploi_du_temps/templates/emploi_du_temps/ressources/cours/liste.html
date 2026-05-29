@@ -1,0 +1,54 @@
+{% extends "emploi_du_temps/base.html" %}
+
+{% block titre %}Cours — EDT ENSPM{% endblock %}
+
+{% block contenu %}
+<div class="page-header">
+  <div>
+    <h1>📚 Cours</h1>
+    <p>{{ cours.count }} cours enregistré{{ cours.count|pluralize }}</p>
+  </div>
+  <a href="{% url 'cours_creer' %}" class="btn btn-vert">+ Nouveau cours</a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2>Liste des cours</h2>
+  </div>
+  {% if cours %}
+  <table>
+    <thead>
+      <tr>
+        <th>Code</th>
+        <th>Intitulé</th>
+        <th>Volume horaire</th>
+        <th>Option</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in cours %}
+      <tr>
+        <td><span class="badge badge-bleu">{{ c.codeCours }}</span></td>
+        <td><strong>{{ c.intitule }}</strong></td>
+        <td>{{ c.volumeHoraire }}h</td>
+        <td><span class="badge badge-vert">{{ c.option.nom }}</span></td>
+        <td>
+          <div class="td-actions">
+            <a href="{% url 'cours_modifier' c.codeCours %}" class="btn btn-bleu btn-sm">✏️ Modifier</a>
+            <a href="{% url 'cours_supprimer' c.codeCours %}" class="btn btn-rouge btn-sm">🗑️ Supprimer</a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="vide">
+    <div class="vide-icon">📚</div>
+    <p>Aucun cours enregistré pour le moment.</p>
+    <a href="{% url 'cours_creer' %}" class="btn btn-vert">+ Ajouter un cours</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

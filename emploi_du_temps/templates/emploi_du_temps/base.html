@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block titre %}Gestion EDT — ENSPM{% endblock %}</title>
+  <style>
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Palette : 70% blanc, 20% bleu, 10% vert ── */
+    :root {
+      --blanc:       #ffffff;
+      --gris-clair:  #f4f6f9;
+      --bleu-fonce:  #1a3a5c;
+      --bleu-moyen:  #1e5fa8;
+      --bleu-clair:  #3b82f6;
+      --bleu-hover:  #2563eb;
+      --vert:        #16a34a;
+      --vert-hover:  #15803d;
+      --vert-clair:  #dcfce7;
+      --rouge:       #dc2626;
+      --rouge-clair: #fee2e2;
+      --texte:       #1e293b;
+      --texte-doux:  #64748b;
+      --bordure:     #cbd5e1;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--gris-clair);
+      color: var(--texte);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Navbar ── */
+    nav {
+      background: var(--bleu-fonce);
+      color: var(--blanc);
+      padding: 0 2rem;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .nav-brand {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--blanc);
+      text-decoration: none;
+    }
+    .nav-brand span { color: #90caf9; }
+    .nav-links { display: flex; gap: 0.5rem; align-items: center; }
+    .nav-links a {
+      color: #cbd5e1;
+      text-decoration: none;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      transition: background 0.2s, color 0.2s;
+    }
+    .nav-links a:hover { background: var(--bleu-moyen); color: var(--blanc); }
+    .nav-links a.active { background: var(--bleu-moyen); color: var(--blanc); }
+    .nav-links .btn-logout {
+      background: var(--rouge);
+      color: var(--blanc);
+      padding: 0.4rem 0.9rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+    .nav-links .btn-logout:hover { background: #b91c1c; }
+
+    /* ── Sidebar ── */
+    .layout { display: flex; flex: 1; }
+
+    aside {
+      width: 230px;
+      background: var(--blanc);
+      border-right: 1px solid var(--bordure);
+      padding: 1.5rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .sidebar-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--texte-doux);
+      margin: 1rem 0 0.4rem 0.5rem;
+    }
+    .sidebar-title:first-child { margin-top: 0; }
+    aside a {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.55rem 0.75rem;
+      border-radius: 8px;
+      text-decoration: none;
+      color: var(--texte);
+      font-size: 0.9rem;
+      transition: background 0.2s, color 0.2s;
+    }
+    aside a:hover { background: #eff6ff; color: var(--bleu-moyen); }
+    aside a.active { background: #dbeafe; color: var(--bleu-moyen); font-weight: 600; }
+    aside .icon { font-size: 1rem; width: 20px; text-align: center; }
+
+    /* ── Contenu principal ── */
+    main {
+      flex: 1;
+      padding: 2rem;
+      background: var(--gris-clair);
+    }
+
+    /* ── En-tête de page ── */
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+    .page-header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--bleu-fonce);
+    }
+    .page-header p {
+      font-size: 0.9rem;
+      color: var(--texte-doux);
+      margin-top: 0.2rem;
+    }
+
+    /* ── Boutons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-bleu  { background: var(--bleu-moyen); color: var(--blanc); }
+    .btn-bleu:hover  { background: var(--bleu-hover); }
+    .btn-vert  { background: var(--vert); color: var(--blanc); }
+    .btn-vert:hover  { background: var(--vert-hover); }
+    .btn-rouge { background: var(--rouge); color: var(--blanc); }
+    .btn-rouge:hover { background: #b91c1c; }
+    .btn-gris  { background: #e2e8f0; color: var(--texte); }
+    .btn-gris:hover  { background: #cbd5e1; }
+    .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+
+    /* ── Carte ── */
+    .card {
+      background: var(--blanc);
+      border-radius: 12px;
+      border: 1px solid var(--bordure);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--bordure);
+      background: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-header h2 { font-size: 1rem; font-weight: 600; color: var(--bleu-fonce); }
+    .card-body { padding: 1.5rem; }
+
+    /* ── Tableau ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    thead th {
+      background: var(--bleu-fonce);
+      color: var(--blanc);
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    thead th:first-child { border-radius: 0; }
+    tbody tr { border-bottom: 1px solid #f1f5f9; transition: background 0.15s; }
+    tbody tr:hover { background: #f8fafc; }
+    tbody td { padding: 0.85rem 1rem; color: var(--texte); vertical-align: middle; }
+    .td-actions { display: flex; gap: 0.5rem; }
+
+    /* ── Badge ── */
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.6rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-bleu  { background: #dbeafe; color: var(--bleu-moyen); }
+    .badge-vert  { background: var(--vert-clair); color: var(--vert); }
+    .badge-gris  { background: #f1f5f9; color: var(--texte-doux); }
+
+    /* ── Formulaire ── */
+    .form-group { margin-bottom: 1.2rem; }
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--bleu-fonce);
+      margin-bottom: 0.4rem;
+    }
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 0.65rem 0.9rem;
+      border: 1.5px solid var(--bordure);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: var(--texte);
+      background: var(--blanc);
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+    }
+    .form-group input:focus,
+    .form-group select:focus {
+      border-color: var(--bleu-clair);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+    }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-actions {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+      padding-top: 1.2rem;
+      border-top: 1px solid var(--bordure);
+    }
+
+    /* ── Alertes ── */
+    .alertes { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+    .alerte {
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border-left: 4px solid;
+    }
+    .alerte-succes  { background: var(--vert-clair);  color: #15803d; border-color: var(--vert); }
+    .alerte-erreur  { background: var(--rouge-clair); color: #b91c1c; border-color: var(--rouge); }
+    .alerte-info    { background: #dbeafe;             color: var(--bleu-moyen); border-color: var(--bleu-clair); }
+
+    /* ── Vide ── */
+    .vide {
+      text-align: center;
+      padding: 3rem;
+      color: var(--texte-doux);
+    }
+    .vide .vide-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+    .vide p { margin-bottom: 1rem; }
+
+    /* ── Confirmation suppression ── */
+    .confirm-box {
+      max-width: 480px;
+      margin: 2rem auto;
+    }
+    .confirm-box .danger-icon {
+      font-size: 3rem;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .confirm-box p { color: var(--texte-doux); margin-bottom: 1.5rem; text-align: center; }
+    .confirm-box strong { color: var(--texte); }
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav>
+    <a class="nav-brand" href="{% url 'accueil' %}">EDT <span>ENSPM</span></a>
+    <div class="nav-links">
+      {% if user.is_authenticated %}
+        <span style="color:#94a3b8; font-size:0.85rem;">{{ user.prenom }} {{ user.nom }}</span>
+        <a href="{% url 'logout' %}" class="btn-logout">Déconnexion</a>
+      {% else %}
+        <a href="{% url 'login' %}">Connexion</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <div class="layout">
+
+    <!-- SIDEBAR -->
+    {% if user.is_authenticated %}
+    <aside>
+      <p class="sidebar-title">Navigation</p>
+      <a href="{% url 'tableau_de_bord' %}" class="{% if request.resolver_match.url_name == 'tableau_de_bord' %}active{% endif %}">
+        <span class="icon">🏠</span> Tableau de bord
+      </a>
+
+      <p class="sidebar-title">Ressources</p>
+      <a href="{% url 'enseignant_liste' %}" class="{% if 'enseignant' in request.resolver_match.url_name %}active{% endif %}">
+        <span class="icon">👨‍🏫</span> Enseignants
+      </a>
+      <a href="{% url 'cours_liste' %}" class="{% if 'cours' in request.resolver_match.url_name %}active{% endif %}">
+        <span class="icon">📚</span> Cours
+      </a>
+      <a href="{% url 'salle_liste' %}" class="{% if 'salle' in request.resolver_match.url_name %}active{% endif %}">
+        <span class="icon">🏫</span> Salles
+      </a>
+      <a href="{% url 'option_liste' %}" class="{% if 'option' in request.resolver_match.url_name %}active{% endif %}">
+        <span class="icon">🎓</span> Options
+      </a>
+    </aside>
+    {% endif %}
+
+    <!-- CONTENU -->
+    <main>
+      <!-- Messages Django -->
+      {% if messages %}
+      <div class="alertes">
+        {% for message in messages %}
+          <div class="alerte {% if message.tags == 'success' %}alerte-succes{% elif message.tags == 'error' %}alerte-erreur{% else %}alerte-info{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% block contenu %}{% endblock %}
+    </main>
+
+  </div>
+</body>
+</html>

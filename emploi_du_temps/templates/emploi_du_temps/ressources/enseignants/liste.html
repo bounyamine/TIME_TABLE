@@ -1,0 +1,60 @@
+{% extends "emploi_du_temps/base.html" %}
+
+{% block titre %}Enseignants — EDT ENSPM{% endblock %}
+
+{% block contenu %}
+<div class="page-header">
+  <div>
+    <h1>👨‍🏫 Enseignants</h1>
+    <p>{{ enseignants.count }} enseignant{{ enseignants.count|pluralize }} enregistré{{ enseignants.count|pluralize }}</p>
+  </div>
+  <a href="{% url 'enseignant_creer' %}" class="btn btn-vert">+ Nouvel enseignant</a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2>Liste des enseignants</h2>
+  </div>
+  {% if enseignants %}
+  <table>
+    <thead>
+      <tr>
+        <th>Nom complet</th>
+        <th>Nom d'utilisateur</th>
+        <th>Email</th>
+        <th>Statut</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in enseignants %}
+      <tr>
+        <td><strong>{{ e.prenom }} {{ e.nom }}</strong></td>
+        <td><span class="badge badge-gris">{{ e.username }}</span></td>
+        <td>{{ e.email }}</td>
+        <td>
+          {% if e.is_active %}
+            <span class="badge badge-vert">Actif</span>
+          {% else %}
+            <span class="badge badge-gris">Inactif</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="td-actions">
+            <a href="{% url 'enseignant_modifier' e.pk %}" class="btn btn-bleu btn-sm">✏️ Modifier</a>
+            <a href="{% url 'enseignant_supprimer' e.pk %}" class="btn btn-rouge btn-sm">🗑️ Supprimer</a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="vide">
+    <div class="vide-icon">👨‍🏫</div>
+    <p>Aucun enseignant enregistré pour le moment.</p>
+    <a href="{% url 'enseignant_creer' %}" class="btn btn-vert">+ Ajouter un enseignant</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

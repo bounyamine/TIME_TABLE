@@ -1,0 +1,52 @@
+{% extends "emploi_du_temps/base.html" %}
+
+{% block titre %}Salles — EDT ENSPM{% endblock %}
+
+{% block contenu %}
+<div class="page-header">
+  <div>
+    <h1>🏫 Salles</h1>
+    <p>{{ salles.count }} salle{{ salles.count|pluralize }} enregistrée{{ salles.count|pluralize }}</p>
+  </div>
+  <a href="{% url 'salle_creer' %}" class="btn btn-vert">+ Nouvelle salle</a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2>Liste des salles</h2>
+  </div>
+  {% if salles %}
+  <table>
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>Site</th>
+        <th>Capacité</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in salles %}
+      <tr>
+        <td><strong>{{ s.nom }}</strong></td>
+        <td><span class="badge badge-bleu">{{ s.site }}</span></td>
+        <td><span class="badge badge-vert">{{ s.capacite }} places</span></td>
+        <td>
+          <div class="td-actions">
+            <a href="{% url 'salle_modifier' s.pk %}" class="btn btn-bleu btn-sm">✏️ Modifier</a>
+            <a href="{% url 'salle_supprimer' s.pk %}" class="btn btn-rouge btn-sm">🗑️ Supprimer</a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="vide">
+    <div class="vide-icon">🏫</div>
+    <p>Aucune salle enregistrée pour le moment.</p>
+    <a href="{% url 'salle_creer' %}" class="btn btn-vert">+ Ajouter une salle</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
