@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block titre %}Accueil - Gestion Emploi du Temps{% endblock %}
+
+{% block contenu %}
+<h1>Gestion Emploi du Temps</h1>
+<p>Bienvenue dans l'application de gestion centralisée des emplois du temps.</p>
+<p>Le Chef de département planifie et publie. Les enseignants et étudiants consultent les emplois du temps publiés.</p>
+<div class="actions">
+    <a class="bouton" href="{% url 'login' %}">Se connecter</a>
+</div>
+{% endblock %}

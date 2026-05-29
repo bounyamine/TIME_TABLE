@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block titre %}Tableau de bord CD{% endblock %}
+
+{% block contenu %}
+<h1>Tableau de bord du Chef de département</h1>
+<p>Vous pouvez gérer les ressources, construire les emplois du temps et publier les versions validées.</p>
+<div class="actions">
+    <a class="bouton" href="/admin/">Administration Django</a>
+    <a class="bouton secondaire" href="{% url 'logout' %}">Se déconnecter</a>
+</div>
+{% endblock %}

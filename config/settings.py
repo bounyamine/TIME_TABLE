@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'emploi_du_temps',
 ]
 
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = 'emploi_du_temps.Utilisateur'
 
 MIDDLEWARE = [
@@ -118,3 +119,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "tableau_de_bord"
+LOGOUT_REDIRECT_URL = "login"
