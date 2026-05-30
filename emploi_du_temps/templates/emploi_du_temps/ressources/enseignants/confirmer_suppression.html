@@ -1,25 +1,24 @@
 {% extends "emploi_du_temps/base.html" %}
-
 {% block titre %}Supprimer enseignant — EDT ENSPM{% endblock %}
-
 {% block contenu %}
-<div class="confirm-box card">
-  <div class="card-body">
-    <div class="danger-icon">⚠️</div>
-    <h2 style="text-align:center; color:#dc2626; margin-bottom:0.75rem;">
-      Confirmer la suppression
-    </h2>
-    <p>
+
+<div class="confirm-card">
+  <div class="confirm-head">
+    <div class="confirm-ico-wrap"><i class="ti ti-alert-triangle"></i></div>
+    <h2 class="confirm-title">Confirmer la suppression</h2>
+    <p class="confirm-text">
       Voulez-vous vraiment supprimer l'enseignant
       <strong>{{ enseignant.prenom }} {{ enseignant.nom }}</strong> ?
       Cette action est <strong>irréversible</strong>.
     </p>
-    <form method="post">
+  </div>
+  <div class="confirm-foot">
+    <a href="{% url 'enseignant_liste' %}" class="btn btn-secondary">Annuler</a>
+    <form method="post" style="display:inline">
       {% csrf_token %}
-      <div class="form-actions" style="justify-content:center;">
-        <button type="submit" class="btn btn-rouge">🗑️ Oui, supprimer</button>
-        <a href="{% url 'enseignant_liste' %}" class="btn btn-gris">Annuler</a>
-      </div>
+      <button type="submit" class="btn btn-danger-soft">
+        <i class="ti ti-trash"></i> Oui, supprimer
+      </button>
     </form>
   </div>
 </div>
