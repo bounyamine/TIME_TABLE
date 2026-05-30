@@ -81,15 +81,19 @@ def accueil(request):
 def tableau_de_bord(request):
     utilisateur = request.user
     if utilisateur.role == Utilisateur.Role.CD:
-        template = "emploi_du_temps/tableaux_de_bord/cd.html"
+        context = {
+            "utilisateur": utilisateur,
+            "nb_enseignants": Utilisateur.objects.filter(role=Utilisateur.Role.ENSEIGNANT).count(),
+            "nb_cours": Cours.objects.count(),
+            "nb_salles": Salle.objects.count(),
+            "nb_options": Option.objects.count(),
+        }
+        return render(request, "emploi_du_temps/tableaux_de_bord/cd.html", context)
     elif utilisateur.role == Utilisateur.Role.ENSEIGNANT:
-        template = "emploi_du_temps/tableaux_de_bord/enseignant.html"
+        return render(request, "emploi_du_temps/tableaux_de_bord/enseignant.html", {"utilisateur": utilisateur})
     elif utilisateur.role == Utilisateur.Role.ETUDIANT:
-        template = "emploi_du_temps/tableaux_de_bord/etudiant.html"
-    else:
-        return HttpResponseForbidden("Rôle utilisateur non autorisé.")
-    return render(request, template, {"utilisateur": utilisateur})
-
+        return render(request, "emploi_du_temps/tableaux_de_bord/etudiant.html", {"utilisateur": utilisateur})
+    return HttpResponseForbidden("Rôle non autorisé.")
 
 def deconnexion(request):
     logout(request)
