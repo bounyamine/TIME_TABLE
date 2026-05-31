@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block titre %}Supprimer emploi du temps — EDT ENSPM{% endblock %}
+
+{% block contenu %}
+<div class="confirm-card">
+  <div class="confirm-head">
+    <div class="confirm-ico-wrap"><i class="ti ti-alert-triangle"></i></div>
+    <h2 class="confirm-title">Supprimer l'emploi du temps</h2>
+    <p class="confirm-text">
+      Voulez-vous vraiment supprimer l'emploi du temps de la semaine du
+      <strong>{{ emploi_du_temps.semaine }}</strong> ?
+      Cette action est <strong>irréversible</strong>.
+    </p>
+  </div>
+  <div class="confirm-foot">
+    <a class="btn btn-secondary" href="{% url 'detail_emploi_du_temps' emploi_du_temps.pk %}">Annuler</a>
+    <form method="post" style="display:inline">
+      {% csrf_token %}
+      <button class="btn btn-danger-soft" type="submit"><i class="ti ti-trash"></i> Oui, supprimer</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

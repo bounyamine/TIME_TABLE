@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block titre %}Emploi du temps officiel — EDT ENSPM{% endblock %}
+{% block body_class %}official-page{% endblock %}
+
+{% block contenu %}
+<div class="official-actions no-print">
+  <div class="td-actions">
+    <a class="btn btn-secondary" href="{% url 'liste_emplois_du_temps' %}"><i class="ti ti-arrow-left"></i> Retour</a>
+    <a class="btn btn-success" href="{% url 'ajouter_creneau' emploi_du_temps.pk %}"><i class="ti ti-plus"></i> Ajouter un créneau</a>
+    <a class="btn btn-outline" href="{% url 'detail_emploi_du_temps' emploi_du_temps.pk %}"><i class="ti ti-eye"></i> Vue détail</a>
+    <button class="btn btn-primary" type="button" onclick="window.print()"><i class="ti ti-printer"></i> Imprimer</button>
+  </div>
+</div>
+
+  <div class="official-table-wrap">
+    <table class="official-table">
+      <thead>
+        <tr>
+          <th class="official-hour-col">HORAIRES</th>
+          {% for code_jour, libelle_jour in jours %}
+            <th>{{ libelle_jour|upper }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for ligne in lignes %}
+          {% if ligne.pause %}
+            <tr class="official-pause-row">
+              <th>{{ ligne.plage.label }}</th>
+              <td colspan="6">PAUSE</td>
+            </tr>
+          {% else %}
+            <tr>
+              <th>{{ ligne.plage.label }}</th>
+              {% for cellule in ligne.cellules %}
+                <td class="official-cell" data-jour="{{ cellule.jour }}" data-plage="{{ cellule.plage.id }}">
+                  {% if cellule.creneau %}
+                    <article class="official-course" draggable="true" data-creneau-id="{{ cellule.creneau.pk }}" data-move-url="{% url 'deplacer_creneau' cellule.creneau.pk %}" data-copy-url="{% url 'copier_creneau' cellule.creneau.pk %}">
+                      <strong class="course-title">{{ cellule.creneau.cours.intitule }}</strong>
+                      <span class="course-code">{{ cellule.creneau.cours.codeCours }}</span>
+                      <span class="course-volume">(VH: {{ cellule.creneau.cours.volumeHoraire }}h)</span>
+                      <strong class="course-teacher">{{ cellule.creneau.enseignant.prenom }} {{ cellule.creneau.enseignant.nom }}</strong>
+                      <small>{{ cellule.creneau.salle.nom }}</small>
+                      <span class="actions-cellule no-print">
+                        <a href="{% url 'modifier_creneau' cellule.creneau.pk %}">Modifier</a>
+                        <button type="button" class="copier" data-creneau-id="{{ cellule.creneau.pk }}">Copier</button>
+                      </span>
+                    </article>
+                  {% else %}
+                    <div class="cellule-vide no-print">
+                      <a href="{% url 'ajouter_creneau' emploi_du_temps.pk %}?jour={{ cellule.jour }}&plage={{ cellule.plage.id }}">Ajouter</a>
+                      <button type="button" class="coller">Coller ici</button>
+                    </div>
+                  {% endif %}
+                </td>
+              {% endfor %}
+            </tr>
+          {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <footer class="official-footer">
+    <p>
+      <strong>NB : Ce calendrier est dynamique et susceptible d’être modifié, les étudiants sont invités à bien vouloir régulièrement consulter le babillard et le Site Web de l’ECOLE NATIONALE SUPERIEURE POLYTECHNIQUE pour s’enquérir des dernières modifications.</strong>
+      <a href="http://enspm.univ-maroua.cm">http://enspm.univ-maroua.cm</a>
+      <a href="mailto:enspm@univ-maroua.cm">enspm@univ-maroua.cm</a>
+    </p>
+    <strong>Le Directeur,</strong>
+  </footer>
+</section>
+
+<script>
+    const csrfToken = "{{ csrf_token }}";
+    let carteDeplacee = null;
+
+    document.querySelectorAll(".official-course").forEach((carte) => {
+        carte.addEventListener("dragstart", () => {
+            carteDeplacee = carte;
+        });
+    });
+
+    document.querySelectorAll(".official-cell").forEach((cellule) => {
+        cellule.addEventListener("dragover", (event) => event.preventDefault());
+        cellule.addEventListener("drop", async (event) => {
+            event.preventDefault();
+            if (!carteDeplacee) return;
+            const formData = new FormData();
+            formData.append("jour", cellule.dataset.jour);
+            formData.append("plage", cellule.dataset.plage);
+            const response = await fetch(carteDeplacee.dataset.moveUrl, {
+                method: "POST",
+                headers: {"X-CSRFToken": csrfToken, "X-Requested-With": "XMLHttpRequest"},
+                body: formData,
+            });
+            if (!response.ok) {
+                const data = await response.json();
+                alert(data.message);
+                return;
+            }
+            window.location.reload();
+        });
+    });
+
+    document.querySelectorAll(".copier").forEach((bouton) => {
+        bouton.addEventListener("click", () => {
+            localStorage.setItem("creneauACopier", bouton.dataset.creneauId);
+            alert("Créneau copié. Cliquez maintenant sur une cellule vide puis 'Coller ici'.");
+        });
+    });
+
+    document.querySelectorAll(".coller").forEach((bouton) => {
+        bouton.addEventListener("click", async () => {
+            const cellule = bouton.closest(".official-cell");
+            const creneauId = localStorage.getItem("creneauACopier");
+            if (!creneauId) {
+                alert("Aucun créneau copié.");
+                return;
+            }
+            const formData = new FormData();
+            formData.append("jour", cellule.dataset.jour);
+            formData.append("plage", cellule.dataset.plage);
+            const response = await fetch(`/creneaux/${creneauId}/copier/`, {
+                method: "POST",
+                headers: {"X-CSRFToken": csrfToken, "X-Requested-With": "XMLHttpRequest"},
+                body: formData,
+            });
+            if (!response.ok) {
+                const data = await response.json();
+                alert(data.message);
+                return;
+            }
+            window.location.reload();
+        });
+    });
+</script>
+{% endblock %}

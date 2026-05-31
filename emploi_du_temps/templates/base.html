@@ -22,7 +22,7 @@
     <header>
         <strong>Gestion Emploi du Temps</strong>
         {% if user.is_authenticated %}
-            <span> — {{ user.prenom }} {{ user.nom }} ({{ user.get_role_display }})</span>
+            <span> — {{ user.nom }} {{ user.prenom }} ({{ user.get_role_display }})</span>
         {% endif %}
     </header>
     <main>
