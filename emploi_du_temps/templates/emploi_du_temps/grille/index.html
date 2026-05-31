@@ -173,7 +173,7 @@
               <div class="edt-cours-nom">{{ cr.cours.intitule }}</div>
               <div class="edt-code-badge-line">{{ cr.cours.codeCours }}</div>
               {% if cr.cours.volumeHoraire %}
-              <div class="edt-volume">{{ cr.cours.volumeHoraire }}</div>
+              <div class="edt-volume">({{ cr.cours.volumeHoraire }})</div>
               {% endif %}
               <div class="edt-enseignant-line">{{ cr.enseignant.nom }} {{ cr.enseignant.prenom }}</div>
             </div>
@@ -220,7 +220,7 @@
 .edt-th{background:#fff;color:#000;border:2px solid #000;font-weight:700;text-align:center;padding:10px 6px;font-size:12px;letter-spacing:.5px}
 .edt-horaire-cell{background:var(--gray-50);border:2px solid #009a63;font-size:12px;text-align:center;vertical-align:middle;padding:8px 6px;font-weight:700;white-space:nowrap}
 .edt-day-cell{border:2px solid #009a63;min-height:90px;min-width:130px;vertical-align:top;padding:4px;position:relative}
-.edt-card{background:#fff;border:2px solid #009a63;border-left:3px solid #7030a0;border-radius:6px;margin-bottom:4px;overflow:hidden;position:relative;transition:box-shadow .15s,transform .15s}
+.edt-card{background:#fff;border-radius:6px;margin-bottom:4px;overflow:hidden;position:relative;transition:box-shadow .15s,transform .15s}
 .edt-card:hover{box-shadow:0 4px 14px rgba(0,0,0,.12)}
 .edt-card-actions{display:none;position:absolute;top:3px;right:3px;gap:3px;z-index:2}
 .edt-card:hover .edt-card-actions{display:flex}

@@ -4,121 +4,131 @@
 
 {% block contenu %}
 <style>
-  /* Reset spécifique à cette page si base.html non chargé */
-  .login-page .main-content,
-  .main-content {
+  .login-page .main-content {
     padding: 0 !important;
-    background: var(--gray-50, #F8FAFC) !important;
+    background: #f8fafc !important;
     display: flex !important;
-    align-items: flex-start !important;
+    align-items: center !important;
     justify-content: center !important;
+    min-height: calc(100vh - 56px);
   }
-  .login-shell {
-    max-width: 920px;
+
+  .login-box {
     width: 100%;
-    margin: 48px auto;
-    display: grid;
-    grid-template-columns: .95fr 1.05fr;
+    max-width: 420px;
+    margin: 32px 16px;
     background: #fff;
-    border: 1px solid #E2E8F0;
-    border-radius: 26px;
-    box-shadow: 0 4px 24px rgba(0,0,0,.10);
+    border: 1px solid #D9E2FF;
+    border-radius: 20px;
     overflow: hidden;
   }
-  .login-visual {
-    background: linear-gradient(135deg, #2563EB, #1D4ED8);
-    color: #fff;
-    padding: 38px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    min-height: 430px;
+
+  .login-top {
+    padding: 36px 36px 28px;
+    border-bottom: 1px solid #EEF2FF;
+    text-align: center;
   }
-  .login-visual .lv-icon {
-    width: 48px; height: 48px; border-radius: 14px;
-    background: rgba(255,255,255,.18);
-    border: 1px solid rgba(255,255,255,.28);
+
+  .login-logo {
+    width: 56px; height: 56px;
+    background: #2563EB;
+    border-radius: 16px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 24px; margin-bottom: 20px;
+    margin: 0 auto 18px;
   }
-  .login-visual h2 { font-size: 28px; line-height: 1.15; letter-spacing: -.5px; margin-bottom: 12px; }
-  .login-visual p  { font-size: 14px; line-height: 1.7; color: rgba(255,255,255,.84); }
-  .login-bullets   { display: grid; gap: 10px; margin-top: 24px; }
-  .login-bullets span {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 13px; font-weight: 600;
+  .login-logo i { color: #fff; font-size: 26px; }
+
+  .login-top h1 {
+    font-size: 22px; font-weight: 700;
+    color: #0F172A; margin: 0 0 6px;
+    letter-spacing: -.4px;
   }
-  .login-bullets i { font-size: 17px; }
-  .login-form-panel { padding: 38px 42px; }
-  .lf-head          { padding-bottom: 22px; }
-  .lf-head h1       { font-size: 24px; margin: 0 0 6px; color: #0F172A; font-weight: 700; }
-  .lf-head p        { font-size: 13px; color: #64748B; line-height: 1.6; margin: 0; }
-  .form-group       { margin-bottom: 20px; }
+  .login-top p {
+    font-size: 13.5px; color: #64748B;
+    line-height: 1.6; margin: 0;
+  }
+
+  .login-body { padding: 28px 36px 32px; }
+
+  .form-group { margin-bottom: 18px; }
+
   .form-label {
-    display: flex; align-items: center; gap: 5px;
-    font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 7px;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12.5px; font-weight: 600;
+    color: #334155; margin-bottom: 7px;
+    text-transform: uppercase; letter-spacing: .5px;
   }
-  .form-required { color: #EF4444; font-size: 14px; }
+  .form-label i { font-size: 14px; color: #2563EB; }
+
   .form-control {
-    width: 100%; padding: 10px 13px;
-    border: 1.5px solid #E2E8F0; border-radius: 9px;
-    font-size: 13.5px; color: #0F172A;
-    background: #fff; outline: none;
-    transition: border-color .18s, box-shadow .18s;
+    width: 100%; padding: 11px 14px;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 10px;
+    font-size: 14px; color: #0F172A;
+    background: #FAFBFF; outline: none;
     font-family: 'Inter', sans-serif;
   }
-  .form-control:focus { border-color: #2563EB; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+  .form-control:hover { border-color: #93C5FD; }
+  .form-control:focus {
+    border-color: #2563EB;
+    background: #fff;
+  }
   .form-control::placeholder { color: #94A3B8; }
+
   .form-errors {
-    background: #FEF2F2; border: 1px solid #FECACA; color: #EF4444;
-    border-radius: 9px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px;
+    background: #FEF2F2; border: 1px solid #FECACA;
+    border-left: 3px solid #EF4444;
+    color: #DC2626; border-radius: 9px;
+    padding: 11px 14px; font-size: 13px;
+    margin-bottom: 18px;
     display: flex; align-items: center; gap: 8px;
   }
-  .field-errors {
-    margin-top: 6px; font-size: 12px; color: #EF4444;
+  .field-errors { margin-top: 6px; font-size: 12px; color: #EF4444; }
+
+  .btn-login {
+    width: 100%; padding: 12px;
+    background: #2563EB; color: #fff;
+    border: none; border-radius: 11px;
+    font-size: 14px; font-weight: 700;
+    cursor: pointer; letter-spacing: .3px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: all .18s;
+    font-family: 'Inter', sans-serif;
+    margin-top: 8px;
   }
-  .submit-row { display: flex; gap: 10px; align-items: center; margin-top: 26px; }
-  .btn {
-    display: inline-flex; align-items: center; gap: 7px;
-    padding: 10px 20px; border-radius: 9px; font-size: 13px; font-weight: 600;
-    border: none; cursor: pointer; transition: all .18s;
-    font-family: 'Inter', sans-serif; text-decoration: none; white-space: nowrap;
+  .btn-login:hover {
+    background: #1D4ED8;
   }
-  .btn-primary  { background: #2563EB; color: #fff; flex: 1; justify-content: center; }
-  .btn-primary:hover  { background: #1D4ED8; }
-  .btn-secondary { background: #fff; color: #334155; border: 1.5px solid #E2E8F0; }
-  .btn-secondary:hover { background: #F1F5F9; }
-  @media (max-width: 700px) {
-    .login-shell { grid-template-columns: 1fr; margin: 0; border-radius: 0; }
-    .login-visual { min-height: auto; padding: 28px; }
-    .login-form-panel { padding: 28px; }
+  .btn-login:active { transform: translateY(0); }
+
+  .login-footer {
+    margin-top: 22px; text-align: center;
+    padding-top: 20px; border-top: 1px solid #EEF2FF;
+  }
+  .login-footer a {
+    color: #2563EB; font-size: 13px;
+    font-weight: 600; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .login-footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 480px) {
+    .login-box { margin: 0; border-radius: 0; border: none; min-height: calc(100vh - 56px); }
+    .login-top, .login-body { padding-left: 24px; padding-right: 24px; }
   }
 </style>
 
-<div class="login-shell">
+<div class="login-box">
 
-  <!-- Panneau bleu gauche -->
-  <div class="login-visual">
-    <div>
-      <div class="lv-icon">
-        <i class="ti ti-calendar-event" aria-hidden="true"></i>
-      </div>
-      <h2>Bienvenue sur<br>EDT ENSPM</h2>
-      <p>Connectez-vous pour accéder à la gestion des emplois du temps de l'école.</p>
+  <div class="login-top">
+    <div class="login-logo">
+      <i class="ti ti-calendar-event" aria-hidden="true"></i>
     </div>
-    <div class="login-bullets">
-      <span><i class="ti ti-layout-dashboard"></i> Tableau de bord personnalisé</span>
-      <span><i class="ti ti-calendar-week"></i> Grille de planification</span>
-      <span><i class="ti ti-shield-check"></i> Accès sécurisé par rôle</span>
-    </div>
+    <h1>Connexion</h1>
+    <p>Accédez à votre espace EDT ENSPM</p>
   </div>
 
-  <!-- Formulaire droit -->
-  <div class="login-form-panel">
-    <div class="lf-head">
-      <h1>Connexion</h1>
-      <p>Entrez vos identifiants pour accéder à votre espace.</p>
-    </div>
+  <div class="login-body">
 
     {% if form.non_field_errors %}
     <div class="form-errors">
@@ -132,15 +142,14 @@
 
       <div class="form-group">
         <label class="form-label" for="id_username">
-          <i class="ti ti-mail"></i>
-          Adresse e-mail <span class="form-required">*</span>
+          <i class="ti ti-user"></i> Nom d'utilisateur
         </label>
         <input
           type="text"
           id="id_username"
           name="username"
           class="form-control"
-          placeholder="prenom.nom@enspm.cm"
+          placeholder="Ex : bouny"
           autocomplete="username"
           autofocus
           value="{{ form.username.value|default:'' }}"
@@ -152,8 +161,7 @@
 
       <div class="form-group">
         <label class="form-label" for="id_password">
-          <i class="ti ti-lock"></i>
-          Mot de passe <span class="form-required">*</span>
+          <i class="ti ti-lock"></i> Mot de passe
         </label>
         <input
           type="password"
@@ -168,17 +176,17 @@
         {% endif %}
       </div>
 
-      <div class="submit-row">
-        <button type="submit" class="btn btn-primary">
-          <i class="ti ti-login"></i> Se connecter
-        </button>
-        <a href="{% url 'accueil' %}" class="btn btn-secondary">
-          <i class="ti ti-arrow-left"></i> Retour
-        </a>
-      </div>
-
+      <button type="submit" class="btn-login">
+        <i class="ti ti-login"></i> Se connecter
+      </button>
     </form>
-  </div>
 
+    <div class="login-footer">
+      <a href="{% url 'accueil' %}">
+        <i class="ti ti-arrow-left"></i> Retour à l'accueil
+      </a>
+    </div>
+
+  </div>
 </div>
 {% endblock %}
