@@ -1,37 +1,120 @@
 {% extends "base.html" %}
-
 {% block titre %}Accueil — EDT ENSPM{% endblock %}
 {% block body_class %}public-page{% endblock %}
 
 {% block contenu %}
+<style>
+  .public-page .main-content,
+  .main-content {
+    padding: 0 !important;
+    background: var(--gray-50, #F8FAFC) !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+  }
+  .public-shell {
+    max-width: 980px;
+    width: 100%;
+    margin: 48px auto;
+    padding: 0 16px;
+  }
+  .hero-card {
+    display: grid;
+    grid-template-columns: 1.15fr .85fr;
+    background: #fff;
+    border: 1px solid #E2E8F0;
+    border-radius: 24px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.09);
+    overflow: hidden;
+    min-height: 360px;
+  }
+  .hero-copy { padding: 46px; }
+  .hero-kicker {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #EFF6FF; color: #2563EB;
+    border: 1px solid #BFDBFE; border-radius: 999px;
+    padding: 5px 14px; font-size: 12px; font-weight: 700;
+    margin-bottom: 20px;
+  }
+  .hero-title {
+    font-size: 34px; line-height: 1.08;
+    letter-spacing: -.8px; margin-bottom: 14px;
+    color: #0F172A; font-weight: 700;
+  }
+  .hero-text {
+    font-size: 15px; line-height: 1.7;
+    color: #64748B; max-width: 460px;
+  }
+  .hero-actions { display: flex; gap: 10px; margin-top: 28px; flex-wrap: wrap; }
+  .hero-panel {
+    background: linear-gradient(135deg, #2563EB, #1D4ED8);
+    color: #fff;
+    padding: 34px;
+    display: flex; flex-direction: column; justify-content: center; gap: 14px;
+  }
+  .hero-panel-item {
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 16px;
+    padding: 16px;
+  }
+  .hero-panel-item strong { display: block; font-size: 15px; margin-bottom: 4px; }
+  .hero-panel-item span  { font-size: 12.5px; opacity: .85; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 10px 22px; border-radius: 9px; font-size: 13px; font-weight: 600;
+    border: none; cursor: pointer; transition: all .18s;
+    font-family: 'Inter', sans-serif; text-decoration: none; white-space: nowrap;
+  }
+  .btn-primary { background: #2563EB; color: #fff; }
+  .btn-primary:hover { background: #1D4ED8; }
+  @media (max-width: 700px) {
+    .hero-card { grid-template-columns: 1fr; }
+    .hero-copy { padding: 28px; }
+    .hero-panel { padding: 28px; }
+    .hero-title { font-size: 26px; }
+    .public-shell { margin: 20px auto; }
+  }
+</style>
+
 <div class="public-shell">
-  <section class="hero-card">
+  <div class="hero-card">
+
+    <!-- Partie gauche : texte -->
     <div class="hero-copy">
-      <span class="hero-kicker"><i class="ti ti-school"></i> ENSPM — Université de Maroua</span>
-      <h1 class="hero-title">Gestion centralisée des emplois du temps</h1>
+      <span class="hero-kicker">
+        <i class="ti ti-calendar-event" aria-hidden="true"></i>
+        Gestion des emplois du temps
+      </span>
+      <h1 class="hero-title">EDT ENSPM<br>Planification intelligente</h1>
       <p class="hero-text">
-        Une plateforme unique pour gérer les ressources, préparer les grilles officielles,
-        publier les emplois du temps validés et permettre la consultation par les enseignants
-        et les étudiants.
+        Gérez facilement les emplois du temps de l'École Nationale Supérieure
+        Polytechnique de Maroua. Créneaux, enseignants, salles et options —
+        tout au même endroit.
       </p>
       <div class="hero-actions">
-        <a class="btn btn-primary" href="{% url 'login' %}"><i class="ti ti-login"></i> Se connecter</a>
+        <a href="{% url 'login' %}" class="btn btn-primary">
+          <i class="ti ti-login" aria-hidden="true"></i> Se connecter
+        </a>
       </div>
     </div>
+
+    <!-- Partie droite : panneau bleu -->
     <div class="hero-panel">
       <div class="hero-panel-item">
-        <strong>Ressources</strong>
-        <span>Enseignants, cours, salles et options dans le même espace.</span>
+        <strong><i class="ti ti-users" aria-hidden="true"></i> Enseignants</strong>
+        <span>Affectation des cours et gestion des disponibilités</span>
       </div>
       <div class="hero-panel-item">
-        <strong>Planification</strong>
-        <span>Création de brouillons, grille officielle, glisser-déposer et publication.</span>
+        <strong><i class="ti ti-calendar-week" aria-hidden="true"></i> Planification</strong>
+        <span>Grille hebdomadaire par option et par salle</span>
       </div>
       <div class="hero-panel-item">
-        <strong>Consultation</strong>
-        <span>Accès par rôle aux emplois du temps publiés.</span>
+        <strong><i class="ti ti-checks" aria-hidden="true"></i> Publication</strong>
+        <span>Validation et diffusion des emplois du temps officiels</span>
       </div>
     </div>
-  </section>
+
+  </div>
 </div>
 {% endblock %}
