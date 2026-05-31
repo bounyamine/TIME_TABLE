@@ -175,9 +175,7 @@
               {% if cr.cours.volumeHoraire %}
               <div class="edt-volume">{{ cr.cours.volumeHoraire }}</div>
               {% endif %}
-              <div class="edt-enseignant-line">{{ cr.enseignant.prenom }} {{ cr.enseignant.nom }}</div>
-              <div class="edt-meta-small"><i class="ti ti-building"></i> {{ cr.salle.nom }}</div>
-              <div class="edt-meta-small"><span class="edt-option-badge">{{ cr.option.nom }}</span></div>
+              <div class="edt-enseignant-line">{{ cr.enseignant.nom }} {{ cr.enseignant.prenom }}</div>
             </div>
           </div>
           {% empty %}
