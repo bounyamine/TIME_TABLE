@@ -590,7 +590,7 @@ def enseignant_creer(request):
     return _utilisateur_creer(
         request,
         Utilisateur.Role.ENSEIGNANT,
-        "emploi_du_temps/ressources/utilisateurs/form.html",
+        "emploi_du_temps/ressources/enseignants/form.html",
         "enseignant_liste",
         "Enseignant",
     )
@@ -602,7 +602,7 @@ def enseignant_modifier(request, pk):
         request,
         pk,
         Utilisateur.Role.ENSEIGNANT,
-        "emploi_du_temps/ressources/utilisateurs/form.html",
+        "emploi_du_temps/ressources/enseignants/form.html",
         "enseignant_liste",
         "Enseignant",
     )
