@@ -380,7 +380,7 @@ def ajax_conflits(request: HttpRequest) -> JsonResponse:
         for c in qs_salle:
             conflits.append({
                 "type": "salle",
-                "message": f"Conflit de SALLE : « {c.salle.nom} » est déjà occupée le {c.get_jour_display()} de {c.heureDebut.strftime('%H:%M')} à {c.heureFin.strftime('%H:%M')} par le cours {c.cours.intitule} ({c.enseignant.prenom} {c.enseignant.nom}).",
+                "message": f"Conflit de SALLE : « {c.salle.nom} » est déjà occupée le {c.get_jour_display()} de {c.heureDebut.strftime('%H:%M')} à {c.heureFin.strftime('%H:%M')} par le cours {c.cours.intitule} ({c.enseignant.nom} {c.enseignant.prenom}).",
             })
     if enseignant_id:
         try:
