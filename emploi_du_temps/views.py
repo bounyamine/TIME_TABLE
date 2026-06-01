@@ -4,13 +4,20 @@ from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
+from django.views.decorators.http import require_POST
 from django.core.exceptions import ValidationError
+from django.db.models import ProtectedError
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
 
-from emploi_du_temps.forms import CreneauDirectForm, EmploiDuTempsForm
+from emploi_du_temps.forms import (
+    CreneauDirectForm,
+    EmploiDuTempsForm,
+    UtilisateurRoleCreationForm,
+    UtilisateurRoleModificationForm,
+)
 from emploi_du_temps.grille import JOURS_EDT, PLAGES_HORAIRES, construire_grille_semaine, trouver_plage
 from emploi_du_temps.permissions import cd_requis
 from .models import Cours, Creneau, EmploiDuTemps, Option, Salle, Utilisateur
@@ -39,6 +46,7 @@ def tableau_de_bord(request: HttpRequest) -> HttpResponse:
         template = "emploi_du_temps/tableaux_de_bord/cd.html"
         context.update({
             "nb_enseignants": Utilisateur.objects.filter(role=Utilisateur.Role.ENSEIGNANT).count(),
+            "nb_etudiants": Utilisateur.objects.filter(role=Utilisateur.Role.ETUDIANT).count(),
             "nb_cours": Cours.objects.count(),
             "nb_salles": Salle.objects.count(),
             "nb_options": Option.objects.count(),
@@ -55,15 +63,19 @@ def tableau_de_bord(request: HttpRequest) -> HttpResponse:
         ).distinct()
     elif utilisateur.role == Utilisateur.Role.ETUDIANT:
         template = "emploi_du_temps/tableaux_de_bord/etudiant.html"
-        context["emplois_du_temps"] = EmploiDuTemps.objects.filter(
-            statut=EmploiDuTemps.Statut.PUBLIE
-        )
+        emplois_du_temps = EmploiDuTemps.objects.filter(statut=EmploiDuTemps.Statut.PUBLIE)
+        if utilisateur.option_id:
+            emplois_du_temps = emplois_du_temps.filter(creneaux__option=utilisateur.option).distinct()
+        else:
+            emplois_du_temps = emplois_du_temps.none()
+        context["emplois_du_temps"] = emplois_du_temps
     else:
         return HttpResponseForbidden("Rôle utilisateur non autorisé.")
 
     return render(request, template, context)
 
 
+@login_required
 def deconnexion(request: HttpRequest) -> HttpResponse:
     logout(request)
     messages.success(request, "Vous êtes déconnecté.")
@@ -106,17 +118,37 @@ def grille_edt(request: HttpRequest, semaine: str | None = None) -> HttpResponse
     lignes = construire_grille_semaine(
         semaine_date,
         salle_id=salle_id,
+        utilisateur=request.user,
     )
 
     # Semaines déjà planifiées
+    semaines_dispo_qs = EmploiDuTemps.objects.all()
+    if not est_cd:
+        semaines_dispo_qs = semaines_dispo_qs.filter(statut=EmploiDuTemps.Statut.PUBLIE)
+        if request.user.role == Utilisateur.Role.ENSEIGNANT:
+            semaines_dispo_qs = semaines_dispo_qs.filter(creneaux__enseignant=request.user)
+        elif request.user.role == Utilisateur.Role.ETUDIANT:
+            if request.user.option_id:
+                semaines_dispo_qs = semaines_dispo_qs.filter(creneaux__option=request.user.option)
+            else:
+                semaines_dispo_qs = semaines_dispo_qs.none()
     semaines_dispo = (
-        EmploiDuTemps.objects.values_list("semaine", flat=True)
+        semaines_dispo_qs.values_list("semaine", flat=True)
         .distinct()
         .order_by("semaine")
     )
 
     # Emplois de cette semaine (pour publication / export)
     emplois_semaine = EmploiDuTemps.objects.filter(semaine=semaine_date).prefetch_related("creneaux")
+    if not est_cd:
+        emplois_semaine = emplois_semaine.filter(statut=EmploiDuTemps.Statut.PUBLIE)
+        if request.user.role == Utilisateur.Role.ENSEIGNANT:
+            emplois_semaine = emplois_semaine.filter(creneaux__enseignant=request.user).distinct()
+        elif request.user.role == Utilisateur.Role.ETUDIANT:
+            if request.user.option_id:
+                emplois_semaine = emplois_semaine.filter(creneaux__option=request.user.option).distinct()
+            else:
+                emplois_semaine = emplois_semaine.none()
 
     return render(request, "emploi_du_temps/grille/index.html", {
         "semaine": semaine_date,
@@ -388,111 +420,6 @@ def ajax_cours_par_option(request: HttpRequest, option_id: int) -> JsonResponse:
     return JsonResponse(cours, safe=False)
 
 
-# ─────────────────────────────────────────────
-#  EMPLOIS DU TEMPS (liste + gestion statut)
-# ─────────────────────────────────────────────
-
-@login_required
-@cd_requis
-def liste_emplois_du_temps(request: HttpRequest) -> HttpResponse:
-    emplois_du_temps = EmploiDuTemps.objects.select_related("creePar")
-    return render(request, "emploi_du_temps/emplois_du_temps/liste.html", {
-        "emplois_du_temps": emplois_du_temps,
-    })
-
-
-@cd_requis
-def creer_emploi_du_temps(request: HttpRequest) -> HttpResponse:
-    if request.method == "POST":
-        form = EmploiDuTempsForm(request.POST)
-        if form.is_valid():
-            emploi = form.save(commit=False)
-            emploi.creePar = request.user
-            emploi.statut = EmploiDuTemps.Statut.BROUILLON
-            emploi.save()
-            messages.success(request, "Emploi du temps brouillon créé.")
-            return redirect("editeur_emploi_du_temps", pk=emploi.pk)
-    else:
-        form = EmploiDuTempsForm()
-    return render(request, "emploi_du_temps/emplois_du_temps/formulaire.html", {
-        "form": form, "titre": "Créer un emploi du temps",
-    })
-
-
-@login_required
-def detail_emploi_du_temps(request: HttpRequest, pk: int) -> HttpResponse:
-    emploi = get_object_or_404(
-        EmploiDuTemps.objects.select_related("creePar")
-        .prefetch_related("creneaux__cours", "creneaux__enseignant", "creneaux__salle"),
-        pk=pk,
-    )
-    est_cd = request.user.role == Utilisateur.Role.CD
-    if not est_cd and emploi.statut != EmploiDuTemps.Statut.PUBLIE:
-        return HttpResponseForbidden("Cet emploi du temps n'est pas encore publié.")
-    return render(request, "emploi_du_temps/emplois_du_temps/detail.html", {
-        "emploi_du_temps": emploi, "est_cd": est_cd,
-    })
-
-
-@cd_requis
-def modifier_emploi_du_temps(request: HttpRequest, pk: int) -> HttpResponse:
-    emploi = get_object_or_404(EmploiDuTemps, pk=pk)
-    if request.method == "POST":
-        form = EmploiDuTempsForm(request.POST, instance=emploi)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Emploi du temps modifié.")
-            return redirect("detail_emploi_du_temps", pk=emploi.pk)
-    else:
-        form = EmploiDuTempsForm(instance=emploi)
-    return render(request, "emploi_du_temps/emplois_du_temps/formulaire.html", {
-        "form": form, "titre": "Modifier un emploi du temps",
-    })
-
-
-@cd_requis
-def supprimer_emploi_du_temps(request: HttpRequest, pk: int) -> HttpResponse:
-    emploi = get_object_or_404(EmploiDuTemps, pk=pk)
-    if request.method == "POST":
-        emploi.delete()
-        messages.success(request, "Emploi du temps supprimé.")
-        return redirect("liste_emplois_du_temps")
-    return render(request, "emploi_du_temps/emplois_du_temps/confirmer_suppression.html", {
-        "emploi_du_temps": emploi,
-    })
-
-
-@cd_requis
-def publier_emploi_du_temps(request: HttpRequest, pk: int) -> HttpResponse:
-    emploi = get_object_or_404(EmploiDuTemps, pk=pk)
-    if request.method == "POST":
-        emploi.statut = EmploiDuTemps.Statut.PUBLIE
-        emploi.datePublication = timezone.now()
-        emploi.save(update_fields=["statut", "datePublication"])
-        messages.success(request, "Emploi du temps publié.")
-    return redirect("detail_emploi_du_temps", pk=emploi.pk)
-
-
-@cd_requis
-def editeur_emploi_du_temps(request: HttpRequest, pk: int) -> HttpResponse:
-    emploi = get_object_or_404(
-        EmploiDuTemps.objects.select_related("creePar"), pk=pk
-    )
-    from emploi_du_temps.grille import construire_grille
-    creneaux = list(emploi.creneaux.select_related("salle"))
-    sites = sorted({c.salle.site for c in creneaux if c.salle.site})
-    salles = sorted({c.salle.nom for c in creneaux if c.salle.nom})
-    return render(request, "emploi_du_temps/emplois_du_temps/editeur.html", {
-        "emploi_du_temps": emploi,
-        "jours": JOURS_EDT,
-        "lignes": construire_grille(emploi),
-        "plages": PLAGES_HORAIRES,
-        "date_fin_semaine": emploi.semaine + timedelta(days=5),
-        "site_officiel": sites[0] if len(sites) == 1 else "à préciser",
-        "salle_officielle": salles[0] if len(salles) == 1 else "selon créneau",
-    })
-
-
 @cd_requis
 def ajouter_creneau(request: HttpRequest, emploi_pk: int) -> HttpResponse:
     from emploi_du_temps.forms import CreneauForm
@@ -604,59 +531,101 @@ def copier_creneau(request: HttpRequest, pk: int) -> HttpResponse:
 #  RESSOURCES
 # ─────────────────────────────────────────────
 
-@login_required
+
+def _utilisateur_liste(request, role: str, template: str, context_name: str):
+    utilisateurs = Utilisateur.objects.filter(role=role).select_related("option")
+    return render(request, template, {context_name: utilisateurs})
+
+
+def _utilisateur_creer(request, role: str, template: str, redirect_name: str, label: str):
+    if request.method == "POST":
+        form = UtilisateurRoleCreationForm(request.POST, role=role)
+        if form.is_valid():
+            utilisateur = form.save()
+            messages.success(request, f"{label} {utilisateur.nom} {utilisateur.prenom} créé avec succès.")
+            return redirect(redirect_name)
+    else:
+        form = UtilisateurRoleCreationForm(role=role)
+    return render(request, template, {"action": "Créer", "form": form, "label": label})
+
+
+def _utilisateur_modifier(request, pk: int, role: str, template: str, redirect_name: str, label: str):
+    utilisateur = get_object_or_404(Utilisateur, pk=pk, role=role)
+    if request.method == "POST":
+        form = UtilisateurRoleModificationForm(request.POST, instance=utilisateur, role=role)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"{label} modifié avec succès.")
+            return redirect(redirect_name)
+    else:
+        form = UtilisateurRoleModificationForm(instance=utilisateur, role=role)
+    return render(request, template, {"action": "Modifier", "form": form, "label": label, "utilisateur": utilisateur})
+
+
+def _utilisateur_supprimer(request, pk: int, role: str, template: str, redirect_name: str, label: str, context_name: str):
+    utilisateur = get_object_or_404(Utilisateur, pk=pk, role=role)
+    if request.method == "POST":
+        try:
+            utilisateur.delete()
+        except ProtectedError:
+            messages.error(request, f"Impossible de supprimer ce {label.lower()} car il est lié à des créneaux.")
+            return redirect(redirect_name)
+        messages.success(request, f"{label} supprimé.")
+        return redirect(redirect_name)
+    return render(request, template, {context_name: utilisateur, "label": label})
+
+
+@cd_requis
 def enseignant_liste(request):
-    enseignants = Utilisateur.objects.filter(role=Utilisateur.Role.ENSEIGNANT)
-    return render(request, "emploi_du_temps/ressources/enseignants/liste.html", {"enseignants": enseignants})
+    return _utilisateur_liste(
+        request,
+        Utilisateur.Role.ENSEIGNANT,
+        "emploi_du_temps/ressources/enseignants/liste.html",
+        "enseignants",
+    )
 
-@login_required
+
+@cd_requis
 def enseignant_creer(request):
-    if request.method == "POST":
-        nom = request.POST.get("nom", "").strip()
-        prenom = request.POST.get("prenom", "").strip()
-        email = request.POST.get("email", "").strip()
-        username = request.POST.get("username", "").strip()
-        password = request.POST.get("password", "").strip()
-        if not all([nom, email, username, password]):
-            messages.error(request, "Tous les champs marqués * sont obligatoires.")
-        elif Utilisateur.objects.filter(email=email).exists():
-            messages.error(request, "Cet email est déjà utilisé.")
-        elif Utilisateur.objects.filter(username=username).exists():
-            messages.error(request, "Ce nom d'utilisateur est déjà pris.")
-        else:
-            Utilisateur.objects.create_user(username=username, email=email, password=password,
-                nom=nom, prenom=prenom, role=Utilisateur.Role.ENSEIGNANT)
-            messages.success(request, f"Enseignant {nom} {prenom} créé avec succès.")
-            return redirect("enseignant_liste")
-    return render(request, "emploi_du_temps/ressources/enseignants/form.html", {"action": "Créer", "enseignant": None})
+    return _utilisateur_creer(
+        request,
+        Utilisateur.Role.ENSEIGNANT,
+        "emploi_du_temps/ressources/utilisateurs/form.html",
+        "enseignant_liste",
+        "Enseignant",
+    )
 
-@login_required
+
+@cd_requis
 def enseignant_modifier(request, pk):
-    enseignant = get_object_or_404(Utilisateur, pk=pk, role=Utilisateur.Role.ENSEIGNANT)
-    if request.method == "POST":
-        enseignant.nom = request.POST.get("nom", enseignant.nom).strip()
-        enseignant.prenom = request.POST.get("prenom", enseignant.prenom).strip()
-        enseignant.email = request.POST.get("email", enseignant.email).strip()
-        enseignant.save()
-        messages.success(request, "Enseignant modifié avec succès.")
-        return redirect("enseignant_liste")
-    return render(request, "emploi_du_temps/ressources/enseignants/form.html", {"action": "Modifier", "enseignant": enseignant})
+    return _utilisateur_modifier(
+        request,
+        pk,
+        Utilisateur.Role.ENSEIGNANT,
+        "emploi_du_temps/ressources/utilisateurs/form.html",
+        "enseignant_liste",
+        "Enseignant",
+    )
 
-@login_required
+
+@cd_requis
 def enseignant_supprimer(request, pk):
-    enseignant = get_object_or_404(Utilisateur, pk=pk, role=Utilisateur.Role.ENSEIGNANT)
-    if request.method == "POST":
-        enseignant.delete()
-        messages.success(request, "Enseignant supprimé.")
-        return redirect("enseignant_liste")
-    return render(request, "emploi_du_temps/ressources/enseignants/confirmer_suppression.html", {"enseignant": enseignant})
+    return _utilisateur_supprimer(
+        request,
+        pk,
+        Utilisateur.Role.ENSEIGNANT,
+        "emploi_du_temps/ressources/enseignants/confirmer_suppression.html",
+        "enseignant_liste",
+        "Enseignant",
+        "enseignant",
+    )
 
-@login_required
+@cd_requis
 def cours_liste(request):
     cours = Cours.objects.select_related("option").all()
     return render(request, "emploi_du_temps/ressources/cours/liste.html", {"cours": cours})
 
-@login_required
+@cd_requis
 def cours_creer(request):
     options = Option.objects.all()
     if request.method == "POST":
@@ -674,7 +643,7 @@ def cours_creer(request):
             return redirect("cours_liste")
     return render(request, "emploi_du_temps/ressources/cours/form.html", {"action": "Créer", "cours": None, "options": options})
 
-@login_required
+@cd_requis
 def cours_modifier(request, pk):
     cours = get_object_or_404(Cours, codeCours=pk)
     options = Option.objects.all()
@@ -687,21 +656,25 @@ def cours_modifier(request, pk):
         return redirect("cours_liste")
     return render(request, "emploi_du_temps/ressources/cours/form.html", {"action": "Modifier", "cours": cours, "options": options})
 
-@login_required
+@cd_requis
 def cours_supprimer(request, pk):
     cours = get_object_or_404(Cours, codeCours=pk)
     if request.method == "POST":
-        cours.delete()
+        try:
+            cours.delete()
+        except ProtectedError:
+            messages.error(request, "Impossible de supprimer ce cours car il est utilisé dans des créneaux.")
+            return redirect("cours_liste")
         messages.success(request, "Cours supprimé.")
         return redirect("cours_liste")
     return render(request, "emploi_du_temps/ressources/cours/confirmer_suppression.html", {"cours": cours})
 
-@login_required
+@cd_requis
 def salle_liste(request):
     salles = Salle.objects.all()
     return render(request, "emploi_du_temps/ressources/salles/liste.html", {"salles": salles})
 
-@login_required
+@cd_requis
 def salle_creer(request):
     if request.method == "POST":
         nom = request.POST.get("nom", "").strip()
@@ -715,7 +688,7 @@ def salle_creer(request):
             return redirect("salle_liste")
     return render(request, "emploi_du_temps/ressources/salles/form.html", {"action": "Créer", "salle": None})
 
-@login_required
+@cd_requis
 def salle_modifier(request, pk):
     salle = get_object_or_404(Salle, pk=pk)
     if request.method == "POST":
@@ -727,21 +700,25 @@ def salle_modifier(request, pk):
         return redirect("salle_liste")
     return render(request, "emploi_du_temps/ressources/salles/form.html", {"action": "Modifier", "salle": salle})
 
-@login_required
+@cd_requis
 def salle_supprimer(request, pk):
     salle = get_object_or_404(Salle, pk=pk)
     if request.method == "POST":
-        salle.delete()
+        try:
+            salle.delete()
+        except ProtectedError:
+            messages.error(request, "Impossible de supprimer cette salle car elle est utilisée dans des créneaux.")
+            return redirect("salle_liste")
         messages.success(request, "Salle supprimée.")
         return redirect("salle_liste")
     return render(request, "emploi_du_temps/ressources/salles/confirmer_suppression.html", {"salle": salle})
 
-@login_required
+@cd_requis
 def option_liste(request):
     options = Option.objects.all()
     return render(request, "emploi_du_temps/ressources/options/liste.html", {"options": options})
 
-@login_required
+@cd_requis
 def option_creer(request):
     if request.method == "POST":
         nom = request.POST.get("nom", "").strip()
@@ -754,7 +731,7 @@ def option_creer(request):
             return redirect("option_liste")
     return render(request, "emploi_du_temps/ressources/options/form.html", {"action": "Créer", "option": None})
 
-@login_required
+@cd_requis
 def option_modifier(request, pk):
     option = get_object_or_404(Option, pk=pk)
     if request.method == "POST":
@@ -765,11 +742,15 @@ def option_modifier(request, pk):
         return redirect("option_liste")
     return render(request, "emploi_du_temps/ressources/options/form.html", {"action": "Modifier", "option": option})
 
-@login_required
+@cd_requis
 def option_supprimer(request, pk):
     option = get_object_or_404(Option, pk=pk)
     if request.method == "POST":
-        option.delete()
+        try:
+            option.delete()
+        except ProtectedError:
+            messages.error(request, "Impossible de supprimer cette option car elle est liée à des cours, créneaux ou étudiants.")
+            return redirect("option_liste")
         messages.success(request, "Option supprimée.")
         return redirect("option_liste")
     return render(request, "emploi_du_temps/ressources/options/confirmer_suppression.html", {"option": option})
