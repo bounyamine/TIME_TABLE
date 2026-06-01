@@ -395,9 +395,9 @@ tbody td{padding:13px 18px;color:var(--gray-700);vertical-align:middle}
   {% if user.is_authenticated %}
   <div class="navbar-right">
     <div class="user-pill">
-      <div class="avatar">{{ user.prenom|first|upper }}{{ user.nom|first|upper }}</div>
+      <div class="avatar">{{ user.nom|first|upper }}{{ user.prenom|first|upper }}</div>
       <div>
-        <div class="user-name">{{ user.prenom }} {{ user.nom }}</div>
+        <div class="user-name">{{ user.nom }} {{ user.prenom }}</div>
         <div class="user-role">{{ user.get_role_display }}</div>
       </div>
     </div>

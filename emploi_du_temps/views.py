@@ -380,7 +380,7 @@ def ajax_conflits(request: HttpRequest) -> JsonResponse:
         for c in qs_salle:
             conflits.append({
                 "type": "salle",
-                "message": f"Conflit de SALLE : « {c.salle.nom} » est déjà occupée le {c.get_jour_display()} de {c.heureDebut.strftime('%H:%M')} à {c.heureFin.strftime('%H:%M')} par le cours {c.cours.intitule} ({c.enseignant.prenom} {c.enseignant.nom}).",
+                "message": f"Conflit de SALLE : « {c.salle.nom} » est déjà occupée le {c.get_jour_display()} de {c.heureDebut.strftime('%H:%M')} à {c.heureFin.strftime('%H:%M')} par le cours {c.cours.intitule} ({c.enseignant.nom} {c.enseignant.prenom}).",
             })
     if enseignant_id:
         try:
@@ -590,7 +590,7 @@ def enseignant_creer(request):
     return _utilisateur_creer(
         request,
         Utilisateur.Role.ENSEIGNANT,
-        "emploi_du_temps/ressources/utilisateurs/form.html",
+        "emploi_du_temps/ressources/enseignants/form.html",
         "enseignant_liste",
         "Enseignant",
     )
@@ -602,7 +602,7 @@ def enseignant_modifier(request, pk):
         request,
         pk,
         Utilisateur.Role.ENSEIGNANT,
-        "emploi_du_temps/ressources/utilisateurs/form.html",
+        "emploi_du_temps/ressources/enseignants/form.html",
         "enseignant_liste",
         "Enseignant",
     )

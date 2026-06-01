@@ -68,7 +68,7 @@
             <option value="">— Sélectionner —</option>
             {% for e in form.enseignant.field.queryset %}
             <option value="{{ e.pk }}" {% if form.enseignant.value|stringformat:"s" == e.pk|stringformat:"s" %}selected{% endif %}>
-              {{ e.prenom }} {{ e.nom }}
+              {{ e.nom }} {{ e.prenom }}
             </option>
             {% endfor %}
           </select>

@@ -11,7 +11,7 @@
     <div class="confirm-text">
       <strong>{{ creneau.cours.intitule }}</strong> ({{ creneau.cours.codeCours }})<br>
       {{ creneau.get_jour_display }} — {{ creneau.heureDebut|time:"H\\Hi" }} à {{ creneau.heureFin|time:"H\\Hi" }}<br>
-      Enseignant : {{ creneau.enseignant.prenom }} {{ creneau.enseignant.nom }}<br>
+      Enseignant : {{ creneau.enseignant.nom }} {{ creneau.enseignant.prenom }}<br>
       Salle : {{ creneau.salle.nom }}<br>
       Option : {{ creneau.option.nom }}
     </div>
