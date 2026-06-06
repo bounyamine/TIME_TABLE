@@ -223,19 +223,97 @@ tbody td{padding:13px 18px;color:var(--gray-700);vertical-align:middle}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .form-actions{display:flex;gap:10px;margin-top:28px;padding-top:22px;border-top:1px solid var(--gray-100)}
 
-/* ── ALERTS ── */
-.alerts-wrap{display:flex;flex-direction:column;gap:10px;margin-bottom:22px}
-.alert{
-  display:flex;align-items:center;gap:12px;
-  padding:13px 18px;border-radius:9px;font-size:13.5px;font-weight:500;
-  animation:slideIn .25s ease-out;
+/* ── TOASTS / FLASH MESSAGES ── */
+.alerts-wrap{
+  position:fixed;
+  top:74px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:3000;
+  width:min(520px, calc(100% - 32px));
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  pointer-events:none;
 }
-@keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
-.alert i{font-size:17px;flex-shrink:0}
-.alert-success{background:var(--green-light);color:var(--green-dark);border:1px solid #A7F3D0;border-left:4px solid var(--green)}
-.alert-error{background:var(--red-light);color:var(--red);border:1px solid #FECACA;border-left:4px solid var(--red)}
-.alert-info{background:var(--blue-light);color:var(--blue);border:1px solid var(--blue-mid);border-left:4px solid var(--blue)}
 
+.alert{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:13px 18px;
+  border-radius:12px;
+  font-size:13.5px;
+  font-weight:600;
+  box-shadow:0 16px 40px rgba(15, 23, 42, .16);
+  background:#fff;
+  pointer-events:auto;
+  animation:toastIn .25s ease-out, toastOut .35s ease-in 4.65s forwards;
+}
+
+@keyframes toastIn{
+  from{
+    opacity:0;
+    transform:translateY(-12px) scale(.98);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0) scale(1);
+  }
+}
+
+@keyframes toastOut{
+  to{
+    opacity:0;
+    transform:translateY(-10px) scale(.98);
+    visibility:hidden;
+  }
+}
+
+.alert i{
+  font-size:17px;
+  flex-shrink:0;
+}
+
+.alert-success{
+  background:var(--green-light);
+  color:var(--green-dark);
+  border:1px solid #A7F3D0;
+  border-left:4px solid var(--green);
+}
+
+.alert-error{
+  background:var(--red-light);
+  color:var(--red);
+  border:1px solid #FECACA;
+  border-left:4px solid var(--red);
+}
+
+.alert-info{
+  background:var(--blue-light);
+  color:var(--blue);
+  border:1px solid var(--blue-mid);border-left:4px solid var(--blue);}
+
+.toast-close{
+  margin-left:auto;
+  border:0;
+  background:transparent;
+  color:currentColor;
+  cursor:pointer;
+  opacity:.7;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:2px;
+}
+
+.toast-close:hover{
+  opacity:1;
+}
+
+.toast-close i{
+  font-size:16px;
+}
 /* ── EMPTY STATE ── */
 .empty-state{display:flex;flex-direction:column;align-items:center;padding:56px 24px;text-align:center}
 .empty-ico{
@@ -384,6 +462,28 @@ tbody td{padding:13px 18px;color:var(--gray-700);vertical-align:middle}
 ::-webkit-scrollbar-thumb:hover{background:var(--gray-400)}
 </style>
 </head>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const toasts = document.querySelectorAll('[data-toast]');
+
+  toasts.forEach(function (toast) {
+    const closeBtn = toast.querySelector('.toast-close');
+
+    const removeToast = function () {
+      toast.style.animation = 'toastOut .25s ease-in forwards';
+      window.setTimeout(function () {
+        toast.remove();
+      }, 260);
+    };
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', removeToast);
+    }
+
+    window.setTimeout(removeToast, 5000);
+  });
+});
+</script>
 <body class="{% block body_class %}{% endblock %}">
 
 <nav class="navbar">
@@ -420,6 +520,9 @@ tbody td{padding:13px 18px;color:var(--gray-700);vertical-align:middle}
     <a href="{% url 'enseignant_liste' %}" class="nav-link {% if 'enseignant' in request.resolver_match.url_name %}active{% endif %}">
       <i class="ti ti-users" aria-hidden="true"></i> Enseignants
     </a>
+    <a href="{% url 'ue_liste' %}" class="nav-link {% if 'ue' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="ti ti-components" aria-hidden="true"></i> UE
+    </a>
     <a href="{% url 'cours_liste' %}" class="nav-link {% if 'cours' in request.resolver_match.url_name %}active{% endif %}">
       <i class="ti ti-book-2" aria-hidden="true"></i> Cours
     </a>
@@ -439,13 +542,24 @@ tbody td{padding:13px 18px;color:var(--gray-700);vertical-align:middle}
 
   <main class="main-content">
     {% if messages %}
-    <div class="alerts-wrap">
+    <div class="alerts-wrap" id="toastContainer" aria-live="polite" aria-atomic="true">
       {% for message in messages %}
-      <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-error{% else %}alert-info{% endif %}">
-        {% if message.tags == 'success' %}<i class="ti ti-circle-check" aria-hidden="true"></i>
-        {% elif message.tags == 'error' %}<i class="ti ti-alert-circle" aria-hidden="true"></i>
-        {% else %}<i class="ti ti-info-circle" aria-hidden="true"></i>{% endif %}
-        {{ message }}
+      <div
+        class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-error{% else %}alert-info{% endif %}"
+        role="status"
+        data-toast
+      >
+        {% if message.tags == 'success' %}
+          <i class="ti ti-circle-check" aria-hidden="true"></i>
+        {% elif message.tags == 'error' %}
+          <i class="ti ti-alert-circle" aria-hidden="true"></i>
+        {% else %}
+          <i class="ti ti-info-circle" aria-hidden="true"></i>
+        {% endif %}
+        <span>{{ message }}</span>
+        <button type="button" class="toast-close" aria-label="Fermer la notification">
+          <i class="ti ti-x" aria-hidden="true"></i>
+        </button>
       </div>
       {% endfor %}
     </div>
