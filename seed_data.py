@@ -100,43 +100,43 @@ cours_data = [
     {"code": "AHN4",    "intitule": "BDA",                                       "vh": VH_STD,  "option": DSC},
 ]
 
-print("\n=== Création des Cours ===")
-for c in cours_data:
-    obj, created = Cours.objects.get_or_create(
-        codeCours=c["code"],
-        defaults={
-            "intitule":      c["intitule"],
-            "volumeHoraire": c["vh"],
-            "option":        c["option"],
-        }
-    )
-    print(f"  {'[CRÉÉ]' if created else '[EXISTE]'} {obj}")
+# print("\n=== Création des Cours ===")
+# for c in cours_data:
+#     obj, created = Cours.objects.get_or_create(
+#         codeCours=c["code"],
+#         defaults={
+#             "intitule":      c["intitule"],
+#             "volumeHoraire": c["vh"],
+#             "option":        c["option"],
+#         }
+#     )
+#     print(f"  {'[CRÉÉ]' if created else '[EXISTE]'} {obj}")
 
 
 # ─────────────────────────────────────────────
 # 4. ENSEIGNANTS
 # ─────────────────────────────────────────────
 enseignants_data = [
-    {"username": "awe.s",          "nom": "AWE",          "prenom": "S.",         "email": "awe.s@enspm.cm"},
-    {"username": "awe.t",          "nom": "AWE",          "prenom": "T.",         "email": "awe.t@enspm.cm"},
-    {"username": "boudjou",        "nom": "BOUDJOU",      "prenom": "",           "email": "boudjou@enspm.cm"},
-    {"username": "nounamo",        "nom": "NOUNAMO",      "prenom": "",           "email": "nounamo@enspm.cm"},
-    {"username": "warda",          "nom": "WARDA",        "prenom": "",           "email": "warda@enspm.cm"},
-    {"username": "warda.lazare",   "nom": "WARDA",        "prenom": "LAZARE",     "email": "warda.lazare@enspm.cm"},
-    {"username": "gazissou",       "nom": "GAZISSOU",     "prenom": "",           "email": "gazissou@enspm.cm"},
-    {"username": "abdoulaziz",     "nom": "ABDOULAZIZ",   "prenom": "HAMAYADJI", "email": "abdoulaziz.hamayadji@enspm.cm"},
-    {"username": "froumsia",       "nom": "FROUMSIA",     "prenom": "",           "email": "froumsia@enspm.cm"},
-    {"username": "guiem",          "nom": "GUIEM",        "prenom": "",           "email": "guiem@enspm.cm"},
-    {"username": "neneo",          "nom": "NENEO",        "prenom": "",           "email": "neneo@enspm.cm"},
-    {"username": "temga",          "nom": "TEMGA",        "prenom": "",           "email": "temga@enspm.cm"},
-    {"username": "mamai",          "nom": "MAMAI",        "prenom": "",           "email": "mamai@enspm.cm"},
-    {"username": "touza",          "nom": "TOUZA",        "prenom": "",           "email": "touza@enspm.cm"},
-    {"username": "anamak",         "nom": "ANAMAK",       "prenom": "",           "email": "anamak@enspm.cm"},
-    {"username": "bayang",         "nom": "BAYANG",       "prenom": "",           "email": "bayang@enspm.cm"},
-    {"username": "douwe",          "nom": "DOUWE",        "prenom": "",           "email": "douwe@enspm.cm"},
-    {"username": "banang",         "nom": "BANANG",       "prenom": "",           "email": "banang@enspm.cm"},
-    {"username": "ngazia",         "nom": "NGAZIA",       "prenom": "",           "email": "ngazia@enspm.cm"},
-    {"username": "aboubakar",      "nom": "ABOUBAKAR",    "prenom": "",           "email": "aboubakar@enspm.cm"},
+    {"username": "awe.s",          "nom": "Dr AWE",          "prenom": "S.",         "email": "awe.s@enspm.cm"},
+    {"username": "awe.t",          "nom": "Dr AWE",          "prenom": "T.",         "email": "awe.t@enspm.cm"},
+    {"username": "boudjou",        "nom": "Dr Boudjou",      "prenom": "",           "email": "boudjou@enspm.cm"},
+    {"username": "nounamo",        "nom": "Dr Nounamo",      "prenom": "",           "email": "nounamo@enspm.cm"},
+    {"username": "warda",          "nom": "Dr Warda",        "prenom": "",           "email": "warda@enspm.cm"},
+    {"username": "warda.lazare",   "nom": "Dr Warda",        "prenom": "LAZARE",     "email": "warda.lazare@enspm.cm"},
+    {"username": "gazissou",       "nom": "Dr Gazissou",     "prenom": "",           "email": "gazissou@enspm.cm"},
+    {"username": "abdoulaziz",     "nom": "Dr Abdoulaziz",   "prenom": "HAMAYADJI", "email": "abdoulaziz.hamayadji@enspm.cm"},
+    {"username": "froumsia",       "nom": "Dr FROUMSIA",     "prenom": "",           "email": "froumsia@enspm.cm"},
+    {"username": "guiem",          "nom": "Dr GUIEM",        "prenom": "",           "email": "guiem@enspm.cm"},
+    {"username": "neneo",          "nom": "Dr NENEO",        "prenom": "",           "email": "neneo@enspm.cm"},
+    {"username": "temga",          "nom": "M. TEMGA",        "prenom": "",           "email": "temga@enspm.cm"},
+    {"username": "mamai",          "nom": "M. MAMAI",        "prenom": "",           "email": "mamai@enspm.cm"},
+    {"username": "touza",          "nom": "M. TOUZA",        "prenom": "",           "email": "touza@enspm.cm"},
+    {"username": "anamak",         "nom": "M. ANAMAK",       "prenom": "",           "email": "anamak@enspm.cm"},
+    {"username": "bayang",         "nom": "M. BAYANG",       "prenom": "",           "email": "bayang@enspm.cm"},
+    {"username": "douwe",          "nom": "M. DOUWE",        "prenom": "",           "email": "douwe@enspm.cm"},
+    {"username": "banang",         "nom": "Dr BANANG",       "prenom": "",           "email": "banang@enspm.cm"},
+    {"username": "ngazia",         "nom": "M. NGAZIA",       "prenom": "",           "email": "ngazia@enspm.cm"},
+    {"username": "aboubakar",      "nom": "M. ABOUBAKAR",    "prenom": "",           "email": "aboubakar@enspm.cm"},
 ]
 
 print("\n=== Création des Enseignants ===")

@@ -3,20 +3,6 @@
 
 {% block contenu %}
 
-<!-- ── Flash messages ── -->
-{% if messages %}
-<div class="alerts-wrap" style="margin-bottom:12px;">
-  {% for message in messages %}
-  <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-error{% else %}alert-info{% endif %}">
-    {% if message.tags == 'success' %}<i class="ti ti-circle-check"></i>
-    {% elif message.tags == 'error' %}<i class="ti ti-alert-circle"></i>
-    {% else %}<i class="ti ti-info-circle"></i>{% endif %}
-    {{ message }}
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
-
 <!-- ── Barre de titre + actions ── -->
 <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
   <div style="display:flex;align-items:center;gap:14px;">
