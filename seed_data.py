@@ -3,33 +3,41 @@ Script de seed — Ressources ENSPM pour les tests et démonstrations
 Utilisation : python manage.py shell < seed_data.py
 """
 
-import django
-import os
+from emploi_du_temps.models import Option, UE, Cours, Salle, Utilisateur
+
 
 # ─────────────────────────────────────────────
 # 1. OPTIONS (filières / niveaux)
 # ─────────────────────────────────────────────
-from emploi_du_temps.models import Option, Cours, Salle, Utilisateur
 
 options_data = [
-    {"nom": "Sécurité Informatique",          "niveau": 4},  # SEC
-    {"nom": "Réseaux et Télécommunications",  "niveau": 4},  # RTE
-    {"nom": "Data Science",                   "niveau": 4},  # DSC
-    {"nom": "Génie Logiciel",                 "niveau": 4},  # GLO
-    {"nom": "Informatique et Télécommunications", "niveau": 3},  # ITE (3e année commune)
+    {"nom": "Sécurité Informatique",             "niveau": 4},  # SEC
+    {"nom": "Réseaux et Télécommunications",      "niveau": 4},  # RTE
+    {"nom": "Data Science",                       "niveau": 4},  # DSC
+    {"nom": "Génie Logiciel",                     "niveau": 4},  # GLO
+    {"nom": "Informatique et Télécommunications", "niveau": 3},  # ITE
 ]
 
 print("=== Création des Options ===")
 options = {}
 for o in options_data:
-    obj, created = Option.objects.get_or_create(nom=o["nom"], defaults={"niveau": o["niveau"]})
+    obj, created = Option.objects.get_or_create(
+        nom=o["nom"], defaults={"niveau": o["niveau"]}
+    )
     options[obj.nom] = obj
-    print(f"  {'[CRÉÉ]' if created else '[EXISTE]'} {obj}")
+    print(f"  {'[CRÉÉ]  ' if created else '[EXISTE]'} {obj}")
+
+SEC = options["Sécurité et Cryptographie"]
+RTE = options["Réseaux et Télécommunications"]
+DSC = options["Data Science"]
+GLO = options["Génie Logiciel"]
+ITE = options["Informatique et Télécommunications"]
 
 
 # ─────────────────────────────────────────────
 # 2. SALLES
 # ─────────────────────────────────────────────
+
 salles_data = [
     {"nom": "Labo INFOTEL",              "capacite": 40,  "site": "Campus de Sékandé"},
     {"nom": "INFOTEL & ENREN",           "capacite": 80,  "site": "Campus de Sékandé"},
@@ -46,97 +54,103 @@ for s in salles_data:
         nom=s["nom"], site=s["site"],
         defaults={"capacite": s["capacite"]}
     )
-    print(f"  {'[CRÉÉ]' if created else '[EXISTE]'} {obj}")
+    print(f"  {'[CRÉÉ]  ' if created else '[EXISTE]'} {obj}")
 
 
 # ─────────────────────────────────────────────
-# 3. COURS  (code, intitulé, volume, option)
+# 3. UE (Unités d'Enseignement)
 # ─────────────────────────────────────────────
-# Raccourcis vers les options
-SEC = options["Sécurité Informatique"]
-RTE = options["Réseaux et Télécommunications"]
-DSC = options["Data Science"]
-GLO = options["Génie Logiciel"]
-ITE = options["Informatique et Télécommunications"]
 
-VH_STD  = "CM:30h, TD:20h, TP:30h, TPE:10h"   # volume standard
-VH_MATH = "CM:20h, TD:10h, TP:10h, TPE:5h"    # Maths ingénieur
+VH_STD  = "CM:30h, TD:20h, TP:30h, TPE:10h"
 
-cours_data = [
-    # ── Cours ITE (niveau 3 commun) ──────────────────────────────────
-    {"code": "ITE345",  "intitule": "Réseaux Locaux et Interconnexion",          "vh": VH_STD,  "option": ITE},
-    {"code": "ITE345b", "intitule": "Logiques et Électronique Programmable",     "vh": VH_STD,  "option": ITE},
-    {"code": "ITE345c", "intitule": "Architecture des Ordinateurs et SI",        "vh": VH_STD,  "option": ITE},
-    {"code": "ITE355",  "intitule": "Logique Formelle",                          "vh": VH_STD,  "option": ITE},
-    {"code": "ITE355b", "intitule": "Programmation Orientée Objet",              "vh": VH_STD,  "option": ITE},
+# Format : (codeUE, intituleUE, option, volumeHoraire, intitule_cours)
+# Chaque UE peut avoir 1 ou 2 cours maximum
+ue_cours_data = [
 
-    # ── Cours GLO (Génie Logiciel) ───────────────────────────────────
-    {"code": "GLO346",  "intitule": "Modélisation Informatique",                 "vh": VH_STD,  "option": GLO},
-    {"code": "GLO417",  "intitule": "IOT (Présentation des Projets)",            "vh": VH_STD,  "option": GLO},
-    {"code": "GLO418",  "intitule": "Développement Web",                         "vh": VH_STD,  "option": GLO},
-    {"code": "GLO418b", "intitule": "Développement d'Applications Mobiles",      "vh": VH_STD,  "option": GLO},
-    {"code": "GLO428",  "intitule": "Administration Base de Données",            "vh": VH_STD,  "option": GLO},
+    # ── ITE niveau 3 commun ───────────────────────────────────────────
+    ("ITE345", "Réseaux Locaux et Interconnexion",       ITE, VH_STD,  "Réseaux Locaux et Interconnexion"),
+    ("ITE345", "Logiques et Électronique Programmable",  ITE, VH_STD,  "Logiques et Électronique Programmable"),
+    ("ITE325", "Architecture des Ordinateurs et SI",     ITE, VH_STD,  "Architecture des Ordinateurs et SI"),
+    ("ITE355", "Logique Formelle",                       ITE, VH_STD,  "Logique Formelle"),
+    ("ITE315", "Programmation Orientée Objet",           ITE, VH_STD,  "Programmation Orientée Objet"),
 
-    # ── Cours SEC (Sécurité) ─────────────────────────────────────────
-    {"code": "SEC346",  "intitule": "Spécialisation en Cryptographie",           "vh": VH_STD,  "option": SEC},
-    {"code": "SEC428",  "intitule": "Logique Théorie des Modèles",               "vh": VH_STD,  "option": SEC},
-    {"code": "SEC438",  "intitule": "Spécialisation en Cryptographie et Codes Correcteurs 1", "vh": VH_STD, "option": SEC},
+    # ── GLO Génie Logiciel ────────────────────────────────────────────
+    ("GLO346", "Modélisation Informatique",              GLO, VH_STD,  "Modélisation Informatique"),
+    ("GLO417", "IOT — Présentation des Projets",         GLO, VH_STD,  "IOT (Présentation des Projets)"),
+    ("GLO418", "Développement Web",                      GLO, VH_STD,  "Développement Web"),
+    ("GLO418", "Développement d'Applications Mobiles",   GLO, VH_STD,  "Développement d'Applications Mobiles"),
+    ("GLO428", "Administration Base de Données",         GLO, VH_STD,  "Administration Base de Données"),
 
-    # ── Cours DSC (Data Science) ─────────────────────────────────────
-    {"code": "DSC356",  "intitule": "Ingénierie des Connaissances",              "vh": VH_STD,  "option": DSC},
-    {"code": "DSC356b", "intitule": "Ingénierie des Données",                   "vh": VH_STD,  "option": DSC},
-    {"code": "DSC418",  "intitule": "Technique de Veille",                       "vh": VH_STD,  "option": DSC},
-    {"code": "DSC428",  "intitule": "Analyse Exploratoire des Données et Régression", "vh": VH_STD, "option": DSC},
-    {"code": "DSC447",  "intitule": "IOT (Présentation des Projets) — DSC",     "vh": VH_STD,  "option": DSC},
+    # ── SEC Sécurité Informatique ─────────────────────────────────────
+    ("SEC346",  "Spécialisation en Cryptographie",                         SEC, VH_STD,  "Spécialisation en Cryptographie"),
+    ("SEC428",  "Logique Théorie des Modèles",                             SEC, VH_STD,  "Logique Théorie des Modèles"),
+    ("SEC438",  "Cryptographie et Codes Correcteurs 1",                    SEC, VH_STD,  "Spécialisation en Cryptographie et Codes Correcteurs 1"),
 
-    # ── Cours RTE (Réseaux/Télécoms) ─────────────────────────────────
-    {"code": "RTE346",  "intitule": "Antenne, Propagation des Ondes et Hyperfréquence", "vh": VH_STD, "option": RTE},
-    {"code": "RTE418",  "intitule": "Circuit Micro-Onde",                        "vh": VH_STD,  "option": RTE},
-    {"code": "RTE437",  "intitule": "IOT (Présentation des Projets) — RTE",     "vh": VH_STD,  "option": RTE},
+    # ── DSC Data Science ──────────────────────────────────────────────
+    ("DSC356",  "Ingénierie des Connaissances",                            DSC, VH_STD,  "Ingénierie des Connaissances"),
+    ("DSC356", "Ingénierie des Données",                                   DSC, VH_STD,  "Ingénierie des Données"),
+    ("DSC418",  "Technique de Veille",                                     DSC, VH_STD,  "Technique de Veille"),
+    ("DSC428",  "Analyse Exploratoire des Données et Régression",          DSC, VH_STD,  "Analyse Exploratoire des Données et Régression"),
+    ("DSC447",  "IOT — Présentation des Projets DSC",                      DSC, VH_STD,  "IOT (Présentation des Projets) — DSC"),
 
-    # ── Cours transversaux (SEC/RTE/DSC/GLO) ────────────────────────
-    {"code": "COM448",  "intitule": "Mathématiques pour Ingénieur",              "vh": VH_MATH, "option": SEC},
-    {"code": "COM458",  "intitule": "Droits des TICs",                           "vh": VH_STD,  "option": SEC},
-    {"code": "AHN4",    "intitule": "BDA",                                       "vh": VH_STD,  "option": DSC},
+    # ── RTE Réseaux et Télécommunications ─────────────────────────────
+    ("RTE346",  "Antenne, Propagation des Ondes et Hyperfréquence",        RTE, VH_STD,  "Antenne, Propagation des Ondes et Hyperfréquence"),
+    ("RTE418",  "Circuit Micro-Onde",                                      RTE, VH_STD,  "Circuit Micro-Onde"),
+    ("RTE437",  "IOT — Présentation des Projets RTE",                      RTE, VH_STD,  "IOT (Présentation des Projets) — RTE"),
+
+    # ── Cours niveau 4 commun ────────────────────────────────────────────
+    ("COM448",  "Mathématiques pour Ingénieur",                            SEC, VH_STD, "Mathématiques pour Ingénieur"),
+    ("COM458",  "Droits des TICs",                                         SEC, VH_STD,  "Droits des TICs"),
 ]
 
-# print("\n=== Création des Cours ===")
-# for c in cours_data:
-#     obj, created = Cours.objects.get_or_create(
-#         codeCours=c["code"],
-#         defaults={
-#             "intitule":      c["intitule"],
-#             "volumeHoraire": c["vh"],
-#             "option":        c["option"],
-#         }
-#     )
-#     print(f"  {'[CRÉÉ]' if created else '[EXISTE]'} {obj}")
+print("\n=== Création des UE et Cours ===")
+for code_ue, intitule_ue, option, vh, intitule_cours in ue_cours_data:
+    # Créer l'UE
+    ue, ue_created = UE.objects.get_or_create(
+        codeUE=code_ue,
+        defaults={"intituleUE": intitule_ue}
+    )
+
+    # Créer le cours lié à cette UE
+    cours_qs = Cours.objects.filter(ue=ue, option=option)
+    if cours_qs.exists():
+        print(f"  [EXISTE] UE {code_ue} → cours déjà présent")
+    else:
+        cours = Cours(
+            ue=ue,
+            intitule=intitule_cours,
+            volumeHoraire=vh,
+            option=option,
+        )
+        cours.save()
+        print(f"  {'[UE CRÉÉE]' if ue_created else '[UE EXISTE]'} {code_ue} → cours '{intitule_cours}' créé")
 
 
 # ─────────────────────────────────────────────
 # 4. ENSEIGNANTS
 # ─────────────────────────────────────────────
+
 enseignants_data = [
-    {"username": "awe.s",          "nom": "Dr AWE",          "prenom": "S.",         "email": "awe.s@enspm.cm"},
-    {"username": "awe.t",          "nom": "Dr AWE",          "prenom": "T.",         "email": "awe.t@enspm.cm"},
-    {"username": "boudjou",        "nom": "Dr Boudjou",      "prenom": "",           "email": "boudjou@enspm.cm"},
-    {"username": "nounamo",        "nom": "Dr Nounamo",      "prenom": "",           "email": "nounamo@enspm.cm"},
-    {"username": "warda",          "nom": "Dr Warda",        "prenom": "",           "email": "warda@enspm.cm"},
-    {"username": "warda.lazare",   "nom": "Dr Warda",        "prenom": "LAZARE",     "email": "warda.lazare@enspm.cm"},
-    {"username": "gazissou",       "nom": "Dr Gazissou",     "prenom": "",           "email": "gazissou@enspm.cm"},
-    {"username": "abdoulaziz",     "nom": "Dr Abdoulaziz",   "prenom": "HAMAYADJI", "email": "abdoulaziz.hamayadji@enspm.cm"},
-    {"username": "froumsia",       "nom": "Dr FROUMSIA",     "prenom": "",           "email": "froumsia@enspm.cm"},
-    {"username": "guiem",          "nom": "Dr GUIEM",        "prenom": "",           "email": "guiem@enspm.cm"},
-    {"username": "neneo",          "nom": "Dr NENEO",        "prenom": "",           "email": "neneo@enspm.cm"},
-    {"username": "temga",          "nom": "M. TEMGA",        "prenom": "",           "email": "temga@enspm.cm"},
-    {"username": "mamai",          "nom": "M. MAMAI",        "prenom": "",           "email": "mamai@enspm.cm"},
-    {"username": "touza",          "nom": "M. TOUZA",        "prenom": "",           "email": "touza@enspm.cm"},
-    {"username": "anamak",         "nom": "M. ANAMAK",       "prenom": "",           "email": "anamak@enspm.cm"},
-    {"username": "bayang",         "nom": "M. BAYANG",       "prenom": "",           "email": "bayang@enspm.cm"},
-    {"username": "douwe",          "nom": "M. DOUWE",        "prenom": "",           "email": "douwe@enspm.cm"},
-    {"username": "banang",         "nom": "Dr BANANG",       "prenom": "",           "email": "banang@enspm.cm"},
-    {"username": "ngazia",         "nom": "M. NGAZIA",       "prenom": "",           "email": "ngazia@enspm.cm"},
-    {"username": "aboubakar",      "nom": "M. ABOUBAKAR",    "prenom": "",           "email": "aboubakar@enspm.cm"},
+    {"username": "awe.s",        "nom": "Dr AWE",         "prenom": "S.",         "email": "awe.s@enspm.cm"},
+    {"username": "awe.t",        "nom": "Dr AWE",         "prenom": "T.",         "email": "awe.t@enspm.cm"},
+    {"username": "boudjou",      "nom": "Dr Boudjou",     "prenom": "",           "email": "boudjou@enspm.cm"},
+    {"username": "nounamo",      "nom": "Dr Nounamo",     "prenom": "",           "email": "nounamo@enspm.cm"},
+    {"username": "warda",        "nom": "Dr Warda",       "prenom": "",           "email": "warda@enspm.cm"},
+    {"username": "warda.lazare", "nom": "Dr Warda",       "prenom": "Lazare",     "email": "warda.lazare@enspm.cm"},
+    {"username": "gazissou",     "nom": "Dr Gazissou",    "prenom": "",           "email": "gazissou@enspm.cm"},
+    {"username": "abdoulaziz",   "nom": "Dr Abdoulaziz",  "prenom": "Hamayadji",  "email": "abdoulaziz.hamayadji@enspm.cm"},
+    {"username": "froumsia",     "nom": "Dr Froumsia",    "prenom": "",           "email": "froumsia@enspm.cm"},
+    {"username": "guiem",        "nom": "Dr Guiem",       "prenom": "",           "email": "guiem@enspm.cm"},
+    {"username": "neneo",        "nom": "Dr Neneo",       "prenom": "",           "email": "neneo@enspm.cm"},
+    {"username": "temga",        "nom": "M. Temga",       "prenom": "",           "email": "temga@enspm.cm"},
+    {"username": "mamai",        "nom": "M. Mamai",       "prenom": "",           "email": "mamai@enspm.cm"},
+    {"username": "touza",        "nom": "M. Touza",       "prenom": "",           "email": "touza@enspm.cm"},
+    {"username": "anamak",       "nom": "M. Anamak",      "prenom": "",           "email": "anamak@enspm.cm"},
+    {"username": "bayang",       "nom": "M. Bayang",      "prenom": "",           "email": "bayang@enspm.cm"},
+    {"username": "douwe",        "nom": "M. Douwe",       "prenom": "",           "email": "douwe@enspm.cm"},
+    {"username": "banang",       "nom": "Dr Banang",      "prenom": "",           "email": "banang@enspm.cm"},
+    {"username": "ngazia",       "nom": "M. Ngazia",      "prenom": "",           "email": "ngazia@enspm.cm"},
+    {"username": "aboubakar",    "nom": "M. Aboubakar",   "prenom": "",           "email": "aboubakar@enspm.cm"},
 ]
 
 print("\n=== Création des Enseignants ===")
@@ -147,7 +161,7 @@ for e in enseignants_data:
     user = Utilisateur.objects.create_user(
         username=e["username"],
         email=e["email"],
-        password="Enspm2026!",   # mot de passe temporaire uniforme
+        password="Enspm2026!",
         nom=e["nom"],
         prenom=e["prenom"],
         role=Utilisateur.Role.ENSEIGNANT,
@@ -158,12 +172,13 @@ for e in enseignants_data:
 # ─────────────────────────────────────────────
 # RÉSUMÉ
 # ─────────────────────────────────────────────
-print("\n" + "="*50)
-print(f"  Options    : {Option.objects.count()}")
-print(f"  Salles     : {Salle.objects.count()}")
-print(f"  Cours      : {Cours.objects.count()}")
-print(f"  Enseignants: {Utilisateur.objects.filter(role='ENSEIGNANT').count()}")
-print("="*50)
+print("\n" + "=" * 50)
+print(f"  Options     : {Option.objects.count()}")
+print(f"  Salles      : {Salle.objects.count()}")
+print(f"  UE          : {UE.objects.count()}")
+print(f"  Cours       : {Cours.objects.count()}")
+print(f"  Enseignants : {Utilisateur.objects.filter(role='ENSEIGNANT').count()}")
+print("=" * 50)
 print("Seed terminé avec succès !")
 print("Mot de passe temporaire des enseignants : Enspm2026!")
 print("Pensez à le changer depuis l'interface admin.")
