@@ -7,6 +7,7 @@ urlpatterns = [
     path("connexion/", views.ConnexionView.as_view(), name="login"),
     path("deconnexion/", views.deconnexion, name="logout"),
     path("tableau-de-bord/", views.tableau_de_bord, name="tableau_de_bord"),
+    path("emplois-du-temps/<int:pk>/", views.detail_emploi_du_temps, name="detail_emploi_du_temps"),
 
     # ── GRILLE EDT par semaine ──
     path("emplois-du-temps/grille/", views.grille_edt, name="grille_edt"),

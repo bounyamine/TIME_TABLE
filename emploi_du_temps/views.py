@@ -38,6 +38,58 @@ def accueil(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+def detail_emploi_du_temps(request: HttpRequest, pk: int) -> HttpResponse:
+    """Vue détaillée (officielle) d'un emploi du temps."""
+    emploi = get_object_or_404(EmploiDuTemps, pk=pk)
+
+    # Sécurité : Seul le CD peut voir un brouillon
+    if (
+        emploi.statut != EmploiDuTemps.Statut.PUBLIE
+        and request.user.role != Utilisateur.Role.CD
+    ):
+        return HttpResponseForbidden("Cet emploi du temps n'est pas encore publié.")
+
+    from .grille import JOURS_EDT, PLAGES_HORAIRES, construire_grille_semaine
+
+    # On construit la grille pour TOUTES les salles
+    lignes_grille = construire_grille_semaine(emploi.semaine, utilisateur=request.user)
+
+    # On transforme la grille en un dictionnaire pour un accès rapide
+    grille_dict = {}
+    for ligne in lignes_grille:
+        if not ligne.get("pause"):
+            for cellule in ligne["cellules"]:
+                key = f"{cellule['jour']}_{ligne['plage']['id']}"
+                grille_dict[key] = cellule["creneaux"]
+
+    # Grille formatée pour le template : Jours en lignes, Plages en colonnes
+    grille_officielle = []
+    for jour_code, jour_label in JOURS_EDT:
+        ligne = {"label": jour_label, "cellules": []}
+        for plage in PLAGES_HORAIRES:
+            if plage.get("pause"):
+                ligne["cellules"].append({"pause": True})
+            else:
+                key = f"{jour_code}_{plage['id']}"
+                ligne["cellules"].append(
+                    {"pause": False, "creneaux": grille_dict.get(key, [])}
+                )
+        grille_officielle.append(ligne)
+
+    return render(
+        request,
+        "emploi_du_temps/detail.html",
+        {
+            "emploi": emploi,
+            "grille": grille_officielle,
+            "plages": PLAGES_HORAIRES,
+            "dimanche": emploi.semaine + timedelta(days=6),
+            "maintenant": timezone.now(),
+        },
+    )
+
+
+@login_required
 def tableau_de_bord(request: HttpRequest) -> HttpResponse:
     utilisateur = request.user
     context = {"utilisateur": utilisateur}

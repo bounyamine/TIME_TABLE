@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block titre %}Emploi du Temps — Semaine du {{ emploi.semaine|date:"d/m/Y" }}{% endblock %}
+
+{% block body_class %}official-page{% endblock %}
+
+{% block contenu %}
+<div class="no-print official-actions">
+  <div>
+    <strong>Consultation de l'emploi du temps</strong>
+    <span>Semaine du {{ emploi.semaine|date:"d/m/Y" }} — Statut : {{ emploi.get_statut_display }}</span>
+  </div>
+  <div style="display:flex;gap:10px;">
+    <button onclick="window.print()" class="btn btn-primary btn-sm">
+      <i class="ti ti-printer"></i> Imprimer / PDF
+    </button>
+    <a href="{% url 'grille_edt' %}?semaine={{ emploi.semaine|date:'Y-m-d' }}" class="btn btn-secondary btn-sm">
+      <i class="ti ti-arrow-left"></i> Retour à la grille
+    </a>
+  </div>
+</div>
+
+<div class="official-sheet">
+  <!-- En-tête officiel -->
+  <div class="official-letterhead">
+    <div class="letterhead-block letterhead-left">
+      <span>RÉPUBLIQUE DU CAMEROUN</span>
+      <em>Peace – Work – Fatherland</em>
+      <span>---------</span>
+      <span>MINISTÈRE DE L'ENSEIGNEMENT SUPÉRIEUR</span>
+      <span>---------</span>
+      <span>UNIVERSITÉ DE MAROUA</span>
+      <span>---------</span>
+      <span>ÉCOLE NATIONALE SUPÉRIEURE POLYTECHNIQUE DE MAROUA</span>
+    </div>
+
+    <div class="letterhead-block letterhead-center">
+      <div class="official-seal">
+        <strong>ENSPM</strong>
+      </div>
+      <p>B.P. / P.O. Box : 46 Maroua</p>
+      <p>Email : <a href="mailto:enspm@univ-maroua.cm">enspm@univ-maroua.cm</a></p>
+      <p>Site : <a href="https://enspm.univ-maroua.cm" target="_blank">enspm.univ-maroua.cm</a></p>
+    </div>
+
+    <div class="letterhead-block letterhead-right">
+      <span>REPUBLIC OF CAMEROON</span>
+      <em>Paix – Travail – Patrie</em>
+      <span>---------</span>
+      <span>MINISTRY OF HIGHER EDUCATION</span>
+      <span>---------</span>
+      <span>THE UNIVERSITY OF MAROUA</span>
+      <span>---------</span>
+      <span>NATIONAL ADVANCED SCHOOL OF ENGINEERING OF MAROUA</span>
+    </div>
+  </div>
+
+  <div class="official-green-line"></div>
+
+  <!-- Titre de l'emploi du temps -->
+  <div class="official-title-box">
+    <h1>EMPLOI DU TEMPS HEBDOMADAIRE</h1>
+    <p>DÉPARTEMENT D'INFORMATIQUE ET DES TÉLÉCOMMUNICATIONS</p>
+    <p class="official-period">Semaine du {{ emploi.semaine|date:"d/m/Y" }} au {{ dimanche|date:"d/m/Y" }}</p>
+  </div>
+
+  <div class="official-table-wrap">
+    <table class="official-table">
+      <thead>
+        <tr>
+          <th style="width:100px;">JOURS</th>
+          {% for plage in plages %}
+            <th>{{ plage.label }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for ligne in grille %}
+        <tr>
+          <th>{{ ligne.label|upper }}</th>
+          {% for cellule in ligne.cellules %}
+            <td class="official-cell">
+              {% if cellule.pause %}
+                PAUSE
+              {% else %}
+                {% for cr in cellule.creneaux %}
+                  <div class="official-course">
+                    <span class="course-title">{{ cr.cours.intitule }}</span>
+                    <span class="course-code">{{ cr.cours.codeCours }}</span>
+                    {% if cr.cours.volumeHoraire %}
+                      <span class="course-volume">({{ cr.cours.volumeHoraire }})</span>
+                    {% endif %}
+                    <span class="course-teacher">{{ cr.enseignant.nom }} {{ cr.enseignant.prenom }}</span>
+                    <small>{{ cr.salle.nom }}</small>
+                  </div>
+                {% endfor %}
+              {% endif %}
+            </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="official-footer">
+    <p>Généré le {{ maintenant|date:"d/m/Y H:i" }} par la plateforme EDT ENSPM.</p>
+    <strong>Le Chef de Département</strong>
+  </div>
+</div>
+
+<style>
+  .official-cell {
+    height: 100px;
+    min-width: 150px;
+    vertical-align: middle;
+  }
+</style>
+{% endblock %}
