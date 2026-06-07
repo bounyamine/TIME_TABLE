@@ -421,59 +421,6 @@ def ajax_cours_par_option(request: HttpRequest, option_id: int) -> JsonResponse:
     return JsonResponse(cours, safe=False)
 
 
-@cd_requis
-def ajouter_creneau(request: HttpRequest, emploi_pk: int) -> HttpResponse:
-    from emploi_du_temps.forms import CreneauForm
-    emploi = get_object_or_404(EmploiDuTemps, pk=emploi_pk)
-    if request.method == "POST":
-        form = CreneauForm(request.POST, emploi_du_temps=emploi)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Créneau ajouté.")
-            return redirect("editeur_emploi_du_temps", pk=emploi.pk)
-    else:
-        plage = trouver_plage(request.GET.get("plage", ""))
-        jour = request.GET.get("jour")
-        initial = {}
-        if plage and not plage.get("pause") and jour:
-            initial = {"jour": jour, "heureDebut": plage["debut"], "heureFin": plage["fin"]}
-        form = CreneauForm(emploi_du_temps=emploi, initial=initial)
-    return render(request, "emploi_du_temps/creneaux/formulaire.html", {
-        "form": form, "emploi_du_temps": emploi, "titre": "Ajouter un créneau",
-    })
-
-
-@cd_requis
-def modifier_creneau(request: HttpRequest, pk: int) -> HttpResponse:
-    from emploi_du_temps.forms import CreneauForm
-    creneau = get_object_or_404(Creneau.objects.select_related("emploiDuTemps"), pk=pk)
-    emploi = creneau.emploiDuTemps
-    if request.method == "POST":
-        form = CreneauForm(request.POST, instance=creneau, emploi_du_temps=emploi)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Créneau modifié.")
-            return redirect("detail_emploi_du_temps", pk=emploi.pk)
-    else:
-        form = CreneauForm(instance=creneau, emploi_du_temps=emploi)
-    return render(request, "emploi_du_temps/creneaux/formulaire.html", {
-        "form": form, "emploi_du_temps": emploi, "titre": "Modifier un créneau",
-    })
-
-
-@cd_requis
-def supprimer_creneau(request: HttpRequest, pk: int) -> HttpResponse:
-    creneau = get_object_or_404(Creneau.objects.select_related("emploiDuTemps"), pk=pk)
-    emploi = creneau.emploiDuTemps
-    if request.method == "POST":
-        creneau.delete()
-        messages.success(request, "Créneau supprimé.")
-        return redirect("detail_emploi_du_temps", pk=emploi.pk)
-    return render(request, "emploi_du_temps/creneaux/confirmer_suppression.html", {
-        "creneau": creneau, "emploi_du_temps": emploi,
-    })
-
-
 def _reponse_edition_cellule(request, emploi, message, statut=200):
     if request.headers.get("x-requested-with") == "XMLHttpRequest":
         return JsonResponse({"message": message}, status=statut)
