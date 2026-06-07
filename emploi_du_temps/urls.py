@@ -11,7 +11,8 @@ urlpatterns = [
 
     # ── GRILLE EDT par semaine ──
     path("emplois-du-temps/grille/", views.grille_edt, name="grille_edt"),
-    path("emplois-du-temps/grille/<str:semaine>/", views.grille_edt, name="grille_edt_semaine"),
+
+    # Chemins statiques prioritaires sur le paramètre <str:semaine>
     path("emplois-du-temps/grille/creneaux/ajouter/", views.ajouter_creneau_grille, name="ajouter_creneau_grille"),
     path("emplois-du-temps/grille/creneaux/<int:pk>/modifier/", views.modifier_creneau_grille, name="modifier_creneau_grille"),
     path("emplois-du-temps/grille/creneaux/<int:pk>/supprimer/", views.supprimer_creneau_grille, name="supprimer_creneau_grille"),
@@ -21,6 +22,9 @@ urlpatterns = [
     path("emplois-du-temps/grille/publier-semaine/", views.publier_semaine, name="publier_semaine"),
     path("emplois-du-temps/grille/depublier-semaine/", views.depublier_semaine, name="depublier_semaine"),
     path("emplois-du-temps/grille/ajax/cours/<int:option_id>/", views.ajax_cours_par_option, name="ajax_cours_par_option"),
+
+    # Chemin avec paramètre (doit être après les chemins statiques)
+    path("emplois-du-temps/grille/<str:semaine>/", views.grille_edt, name="grille_edt_semaine"),
 
     # ── Ressources ────────────────────────────────
     path("enseignants/", views.enseignant_liste, name="enseignant_liste"),
