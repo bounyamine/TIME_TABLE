@@ -30,8 +30,11 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-$if4n1%&wdp#k7ur56p&7w2dc&
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',') if os.getenv('ALLOWED_HOSTS') else []
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://web-production-7ff2a.up.railway.app',
+]
 
 # Application definition
 
