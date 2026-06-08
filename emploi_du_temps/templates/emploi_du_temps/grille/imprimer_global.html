@@ -44,7 +44,7 @@ body {
   width: 20mm;
   height: 20mm;
   border-radius: 50%;
-  border: 1px solid #70c341;
+  border: 1px solid #fff;
   display: block;
   margin: 0 auto;
 }
@@ -52,7 +52,7 @@ body {
   display: inline-block;
   width: 20mm; height: 20mm;
   border-radius: 50%;
-  border: 1px solid #70c341;
+  border: 1px solid #fff;
   line-height: 20mm;
   font-weight: 900; font-size: 9px;
   color: #1a7a3a; text-align: center;
@@ -80,11 +80,11 @@ body {
   text-decoration: underline; letter-spacing: 1px;
 }
 .title-box .annee {
-  font-size: 9px; font-weight: 700; margin-top: 1mm;
+  font-size: 12px; font-weight: 700; margin-top: 1mm; text-decoration: underline; 
 }
 .title-box .annee a { color: #005baa; text-decoration: underline; }
-.title-box .site-salle { font-size: 10px; font-weight: 700; margin-top: 1.5mm; }
-.title-box .salle-val  { color: #c00; }
+.title-box .site-salle { font-size: 13px; font-weight: 700; margin-top: 1.5mm; }
+.title-box .salle-val  { color: #c00}
 
 /* TABLEAU */
 table.edt {
@@ -194,14 +194,17 @@ table.edt td.pause-full {
   display: table;
   width: 100%;
   margin-bottom: 0;
+  table-layout: fixed;
 }
 .footer-note {
   display: table-cell;
+  width: 65%;
   font-size: 7px;
   font-weight: 700;
-  line-height: 1.6;
+  line-height: 1.2;
   vertical-align: bottom;
   padding-right: 4mm;
+  text-align: justify;
 }
 .footer-note a {
   color: #005baa;
@@ -211,11 +214,12 @@ table.edt td.pause-full {
 .footer-directeur {
   display: table-cell;
   text-align: right;
+  padding-right: 15px;
   font-size: 10px;
   font-weight: 700;
   vertical-align: bottom;
   white-space: nowrap;
-  width: 40mm;
+  width: 35%;
 }
 
 @page { size: A4 landscape; margin: 0; }
