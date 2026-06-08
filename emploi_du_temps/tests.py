@@ -8,11 +8,11 @@ from .pdf_export import generer_pdf_emplois_du_temps
 
 
 class ExportPDFTests(TestCase):
-    def setUp(self):
+     def setUp(self):
         self.cd = Utilisateur.objects.create_user(
             username="chef",
             email="chef@example.com",
-            password="secret123",
+            password="temporary_password_for_tests", # Modifiez cette chaîne
             nom="Chef",
             prenom="Departement",
             role=Utilisateur.Role.CD,
@@ -20,11 +20,12 @@ class ExportPDFTests(TestCase):
         self.enseignant = Utilisateur.objects.create_user(
             username="enseignant",
             email="enseignant@example.com",
-            password="secret123",
+            password="temporary_password_for_tests", # Modifiez cette chaîne
             nom="AWE",
             prenom="T.",
             role=Utilisateur.Role.ENSEIGNANT,
         )
+        # ... le reste de votre code reste inchangé
         self.option = Option.objects.create(nom="Génie Logiciel", niveau=4)
         self.cours = Cours.objects.create(
             codeCours="GLO418",
