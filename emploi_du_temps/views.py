@@ -19,6 +19,7 @@ from emploi_du_temps.forms import (
     UtilisateurRoleModificationForm,
 )
 from emploi_du_temps.grille import JOURS_EDT, PLAGES_HORAIRES, construire_grille_semaine, trouver_plage
+from emploi_du_temps.pdf_export import generer_pdf_emplois_du_temps
 from emploi_du_temps.permissions import cd_requis
 from .models import Cours, Creneau, EmploiDuTemps, Option, Salle, Utilisateur
 
@@ -113,7 +114,17 @@ def grille_edt(request: HttpRequest, semaine: str | None = None) -> HttpResponse
     if not salle_id:
         premiere_salle = salles.first()
         salle_id = premiere_salle.pk if premiere_salle else None
+    
     est_cd = request.user.role == Utilisateur.Role.CD
+
+    if request.GET.get("export") == "pdf":
+        if not est_cd:
+            return HttpResponseForbidden("Seul le chef de département peut exporter le planning global.")
+        export = generer_pdf_emplois_du_temps(semaine_date)
+        response = HttpResponse(export.contenu, content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="{export.nom_fichier}"'
+        return response
+    
 
     lignes = construire_grille_semaine(
         semaine_date,
