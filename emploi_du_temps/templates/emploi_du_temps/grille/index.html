@@ -63,8 +63,8 @@
         <i class="ti ti-download"></i> Exporter <i class="ti ti-chevron-down" style="font-size:11px;"></i>
       </button>
       <div id="exportDropdown" class="dropdown-menu" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1px solid var(--gray-200);border-radius:10px;box-shadow:var(--shadow-md);min-width:200px;z-index:100;overflow:hidden;">
-        <a href="{% url 'grille_edt_semaine' semaine|date:'Y-m-d' %}?export=pdf&salle_id={{ salle_id_actif|default:'' }}" class="dropdown-item">
-          <i class="ti ti-file-type-pdf" style="color:#e74c3c;"></i> Exporter en PDF
+        <a href="{% url 'grille_edt_semaine' semaine|date:'Y-m-d' %}?export=pdf" class="dropdown-item">
+          <i class="ti ti-file-type-pdf" style="color:#e74c3c;"></i> Exporter le PDF global
         </a>
         <a href="{% url 'grille_edt_semaine' semaine|date:'Y-m-d' %}?export=imprimer&salle_id={{ salle_id_actif|default:'' }}" class="dropdown-item" target="_blank">
           <i class="ti ti-printer" style="color:var(--blue);"></i> Version imprimable
