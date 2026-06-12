@@ -10,9 +10,9 @@
       <p class="page-sub">Gérez les salles et amphithéâtres</p>
     </div>
   </div>
-  <a href="{% url 'salle_creer' %}" class="btn btn-success">
+  <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'salle_creer' %}" data-title="Nouvelle salle" data-subtitle="Ajoutez une salle ou un amphithéâtre">
     <i class="ti ti-plus"></i> Nouvelle salle
-  </a>
+  </button>
 </div>
 
 <div class="card">
@@ -33,13 +33,13 @@
       </thead>
       <tbody>
         {% for s in salles %}
-        <tr class="clickable-row" data-href="{% url 'salle_modifier' s.pk %}" tabindex="0" role="link" aria-label="Modifier la salle {{ s.nom }}">
+        <tr class="clickable-row" data-resource-row data-modal-edit="true" data-href="{% url 'salle_modifier' s.pk %}" data-title="Modifier la salle" data-subtitle="{{ s.nom }}" data-field-nom="{{ s.nom }}" data-field-site="{{ s.site }}" data-field-capacite="{{ s.capacite }}" tabindex="0" role="link" aria-label="Modifier la salle {{ s.nom }}">
           <td class="td-bold">{{ s.nom }}</td>
           <td><span class="badge badge-blue">{{ s.site }}</span></td>
           <td><span class="badge badge-green"><span class="dot"></span>{{ s.capacite }} places</span></td>
           <td>
             <div class="td-actions td-actions-icon">
-              <a href="{% url 'salle_supprimer' s.pk %}" class="icon-action icon-action-danger" title="Supprimer" aria-label="Supprimer la salle {{ s.nom }}">
+              <a href="{% url 'salle_supprimer' s.pk %}" class="icon-action icon-action-danger" data-resource-delete data-delete-url="{% url 'salle_supprimer' s.pk %}" data-confirm-text="Supprimer la salle {{ s.nom }} ?" title="Supprimer" aria-label="Supprimer la salle {{ s.nom }}">
                 <i class="ti ti-trash" aria-hidden="true"></i>
               </a>
             </div>
@@ -55,10 +55,66 @@
     <div class="empty-ico"><i class="ti ti-building"></i></div>
     <h3 class="empty-title">Aucune salle</h3>
     <p class="empty-text">Ajoutez les salles et amphithéâtres disponibles.</p>
-    <a href="{% url 'salle_creer' %}" class="btn btn-success">
+    <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'salle_creer' %}" data-title="Nouvelle salle" data-subtitle="Ajoutez une salle ou un amphithéâtre">
       <i class="ti ti-plus"></i> Ajouter une salle
-    </a>
+    </button>
   </div>
   {% endif %}
+</div>
+
+<div class="resource-modal" id="resourceFormModal" aria-hidden="true">
+  <div class="resource-modal-backdrop" data-resource-modal-close></div>
+  <div class="resource-modal-panel" role="dialog" aria-modal="true" aria-labelledby="resourceFormTitle">
+    <div class="resource-modal-head">
+      <div>
+        <h2 id="resourceFormTitle">Nouvelle salle</h2>
+        <p id="resourceFormSubtitle">Renseignez les informations de la salle</p>
+      </div>
+      <button type="button" class="resource-modal-close" data-resource-modal-close aria-label="Fermer"><i class="ti ti-x"></i></button>
+    </div>
+    <form id="resourceForm" class="resource-modal-body" method="post" action="{% url 'salle_creer' %}">
+      {% csrf_token %}
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="modalNom">Nom de la salle <span class="form-required">*</span></label>
+          <input class="form-control" type="text" id="modalNom" name="nom" placeholder="Ex : Amphi A" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="modalCapacite">Capacité <span class="form-required">*</span></label>
+          <input class="form-control" type="number" id="modalCapacite" name="capacite" min="1" placeholder="Ex : 120" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="modalSite">Site <span class="form-required">*</span></label>
+        <input class="form-control" type="text" id="modalSite" name="site" placeholder="Ex : Campus principal" required>
+      </div>
+      <div class="resource-modal-actions">
+        <button type="button" class="btn btn-secondary" data-resource-modal-close>Annuler</button>
+        <button type="submit" class="btn btn-success"><i class="ti ti-device-floppy"></i> Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="resource-modal" id="resourceConfirmModal" aria-hidden="true">
+  <div class="resource-modal-backdrop" data-resource-modal-close></div>
+  <div class="resource-modal-panel is-confirm" role="dialog" aria-modal="true" aria-labelledby="resourceConfirmTitle">
+    <div class="resource-modal-head">
+      <div>
+        <h2 id="resourceConfirmTitle">Confirmer la suppression</h2>
+        <p>Cette action peut être bloquée si la salle est utilisée.</p>
+      </div>
+      <button type="button" class="resource-modal-close" data-resource-modal-close aria-label="Fermer"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="resource-confirm-body">
+      <div class="resource-confirm-icon"><i class="ti ti-trash"></i></div>
+      <p id="resourceConfirmText">Cet élément sera supprimé.</p>
+    </div>
+    <form id="resourceConfirmForm" method="post" class="resource-modal-actions resource-confirm-actions">
+      {% csrf_token %}
+      <button type="button" class="btn btn-secondary" data-resource-modal-close>Annuler</button>
+      <button type="submit" class="btn btn-danger-soft"><i class="ti ti-trash"></i> Supprimer</button>
+    </form>
+  </div>
 </div>
 {% endblock %}

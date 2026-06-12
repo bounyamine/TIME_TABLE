@@ -662,11 +662,14 @@ def _redirect_apres_action(request: HttpRequest, fallback: str):
 def _utilisateur_liste(request, role: str, template: str, context_name: str):
     utilisateurs = Utilisateur.objects.filter(role=role).select_related("option").order_by("nom", "prenom", "username")
     page_obj, pagination_query = _paginer_ressources(request, utilisateurs)
-    return render(request, template, {
+    context = {
         context_name: page_obj.object_list,
         "page_obj": page_obj,
         "pagination_query": pagination_query,
-    })
+    }
+    if role == Utilisateur.Role.ETUDIANT:
+        context["options"] = Option.objects.all()
+    return render(request, template, context)
 
 
 def _utilisateur_creer(request, role: str, template: str, redirect_name: str, label: str):
@@ -886,6 +889,8 @@ def cours_liste(request):
         "cours": page_obj.object_list,
         "page_obj": page_obj,
         "pagination_query": pagination_query,
+        "options": Option.objects.all(),
+        "ues": UE.objects.prefetch_related("cours").all(),
     })
 
 @cd_requis

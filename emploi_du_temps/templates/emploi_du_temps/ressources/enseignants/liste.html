@@ -34,9 +34,9 @@
       <p class="page-sub">Gérez les enseignants du département</p>
     </div>
   </div>
-  <a href="{% url 'enseignant_creer' %}" class="btn btn-success">
+  <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'enseignant_creer' %}" data-title="Nouvel enseignant" data-subtitle="Créez le compte enseignant">
     <i class="ti ti-plus"></i> Nouvel enseignant
-  </a>
+  </button>
 </div>
 
 <div class="card">
@@ -58,7 +58,7 @@
       </thead>
       <tbody>
         {% for e in enseignants %}
-        <tr class="clickable-row" data-href="{% url 'enseignant_modifier' e.pk %}" tabindex="0" role="link" aria-label="Modifier l'enseignant {{ e.nom }} {{ e.prenom }}">
+        <tr class="clickable-row" data-resource-row data-modal-edit="true" data-href="{% url 'enseignant_modifier' e.pk %}" data-title="Modifier l'enseignant" data-subtitle="{{ e.nom }} {{ e.prenom }}" data-field-nom="{{ e.nom }}" data-field-prenom="{{ e.prenom }}" data-field-email="{{ e.email }}" data-field-is_active="{% if e.is_active %}1{% else %}0{% endif %}" tabindex="0" role="link" aria-label="Modifier l'enseignant {{ e.nom }} {{ e.prenom }}">
           <td class="td-bold">{{ e.nom }} {{ e.prenom }}</td>
           <td><span class="badge badge-gray">{{ e.username }}</span></td>
           <td class="td-muted">{{ e.email }}</td>
@@ -81,7 +81,7 @@
           </td>
           <td>
             <div class="td-actions td-actions-icon">
-              <a href="{% url 'enseignant_supprimer' e.pk %}" class="icon-action icon-action-danger" title="Supprimer" aria-label="Supprimer l'enseignant {{ e.nom }} {{ e.prenom }}">
+              <a href="{% url 'enseignant_supprimer' e.pk %}" class="icon-action icon-action-danger" data-resource-delete data-delete-url="{% url 'enseignant_supprimer' e.pk %}" data-confirm-text="Supprimer l'enseignant {{ e.nom }} {{ e.prenom }} ?" title="Supprimer" aria-label="Supprimer l'enseignant {{ e.nom }} {{ e.prenom }}">
                 <i class="ti ti-trash" aria-hidden="true"></i>
               </a>
             </div>
@@ -97,10 +97,87 @@
     <div class="empty-ico"><i class="ti ti-users"></i></div>
     <h3 class="empty-title">Aucun enseignant</h3>
     <p class="empty-text">Commencez par ajouter les enseignants du département.</p>
-    <a href="{% url 'enseignant_creer' %}" class="btn btn-success">
+    <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'enseignant_creer' %}" data-title="Nouvel enseignant" data-subtitle="Créez le compte enseignant">
       <i class="ti ti-plus"></i> Ajouter un enseignant
-    </a>
+    </button>
   </div>
   {% endif %}
+</div>
+
+<div class="resource-modal" id="resourceFormModal" aria-hidden="true">
+  <div class="resource-modal-backdrop" data-resource-modal-close></div>
+  <div class="resource-modal-panel" role="dialog" aria-modal="true" aria-labelledby="resourceFormTitle">
+    <div class="resource-modal-head">
+      <div>
+        <h2 id="resourceFormTitle">Nouvel enseignant</h2>
+        <p id="resourceFormSubtitle">Renseignez les informations de l'enseignant</p>
+      </div>
+      <button type="button" class="resource-modal-close" data-resource-modal-close aria-label="Fermer"><i class="ti ti-x"></i></button>
+    </div>
+    <form id="resourceForm" class="resource-modal-body" method="post" action="{% url 'enseignant_creer' %}">
+      {% csrf_token %}
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="modalNom">Nom <span class="form-required">*</span></label>
+          <input class="form-control" type="text" id="modalNom" name="nom" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="modalPrenom">Prénom</label>
+          <input class="form-control" type="text" id="modalPrenom" name="prenom">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="modalEmail">Adresse email <span class="form-required">*</span></label>
+        <input class="form-control" type="email" id="modalEmail" name="email" required>
+      </div>
+      <div class="form-row" data-create-only>
+        <div class="form-group">
+          <label class="form-label" for="modalUsername">Nom d'utilisateur <span class="form-required">*</span></label>
+          <input class="form-control" type="text" id="modalUsername" name="username" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="modalPassword">Mot de passe <span class="form-required">*</span></label>
+          <div class="password-field">
+            <input class="form-control" type="password" id="modalPassword" name="password" autocomplete="new-password" required>
+            <button type="button" class="password-toggle" data-password-toggle="modalPassword" aria-label="Afficher le mot de passe" aria-pressed="false" title="Afficher le mot de passe">
+              <i class="ti ti-eye" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="form-group" data-edit-only hidden>
+        <label class="form-label">
+          <input type="checkbox" name="is_active" disabled>
+          Compte actif
+        </label>
+      </div>
+      <div class="resource-modal-actions">
+        <button type="button" class="btn btn-secondary" data-resource-modal-close>Annuler</button>
+        <button type="submit" class="btn btn-success"><i class="ti ti-device-floppy"></i> Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="resource-modal" id="resourceConfirmModal" aria-hidden="true">
+  <div class="resource-modal-backdrop" data-resource-modal-close></div>
+  <div class="resource-modal-panel is-confirm" role="dialog" aria-modal="true" aria-labelledby="resourceConfirmTitle">
+    <div class="resource-modal-head">
+      <div>
+        <h2 id="resourceConfirmTitle">Confirmer la suppression</h2>
+        <p>Cette action peut être bloquée si l'enseignant est lié à des créneaux.</p>
+      </div>
+      <button type="button" class="resource-modal-close" data-resource-modal-close aria-label="Fermer"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="resource-confirm-body">
+      <div class="resource-confirm-icon"><i class="ti ti-trash"></i></div>
+      <p id="resourceConfirmText">Cet élément sera supprimé.</p>
+    </div>
+    <form id="resourceConfirmForm" method="post" class="resource-modal-actions resource-confirm-actions">
+      {% csrf_token %}
+      <button type="button" class="btn btn-secondary" data-resource-modal-close>Annuler</button>
+      <button type="submit" class="btn btn-danger-soft"><i class="ti ti-trash"></i> Supprimer</button>
+    </form>
+  </div>
 </div>
 {% endblock %}

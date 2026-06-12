@@ -236,6 +236,36 @@ tbody td{padding:13px 18px;color:var(--gray-700);vertical-align:middle}
 .icon-action-danger{background:var(--red-light);color:var(--red);border-color:#FECACA}
 .icon-action-danger:hover{background:var(--red);color:#fff}
 
+.resource-modal{position:fixed;inset:0;z-index:4050;display:none;align-items:center;justify-content:center;padding:18px}
+.resource-modal.show{display:flex}
+.resource-modal-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.42)}
+.resource-modal-panel{
+  position:relative;width:min(680px,100%);max-height:calc(100vh - 36px);overflow:auto;
+  background:#fff;border:1px solid var(--gray-200);border-radius:14px;box-shadow:0 24px 70px rgba(15,23,42,.25);
+}
+.resource-modal-panel.is-confirm{width:min(460px,100%)}
+.resource-modal-head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+  padding:18px 22px;border-bottom:1px solid var(--gray-100);background:var(--gray-50);
+}
+.resource-modal-head h2{margin:0;font-size:17px;color:var(--gray-900)}
+.resource-modal-head p{margin:4px 0 0;color:var(--gray-500);font-size:12.5px;line-height:1.5}
+.resource-modal-close{
+  width:32px;height:32px;border:0;border-radius:8px;background:#fff;color:var(--gray-500);
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.resource-modal-close:hover{background:var(--gray-100);color:var(--gray-900)}
+.resource-modal-body{padding:22px}
+.resource-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;padding-top:18px;border-top:1px solid var(--gray-100);flex-wrap:wrap}
+.resource-confirm-body{padding:24px 22px;display:flex;gap:14px;align-items:flex-start}
+.resource-confirm-icon{
+  width:44px;height:44px;border-radius:12px;background:var(--red-light);color:var(--red);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.resource-confirm-icon i{font-size:22px}
+.resource-confirm-body p{margin:0;color:var(--gray-700);font-size:13.5px;line-height:1.6}
+.resource-confirm-actions{padding:16px 22px;background:var(--gray-50)}
+
 /* ── PAGINATION ── */
 .pagination-bar{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -773,6 +803,7 @@ document.addEventListener('click', function (event) {
 
   const row = event.target.closest('.clickable-row[data-href]');
   if (!row || event.target.closest('a, button, input, select, textarea, label, form, [data-row-ignore]')) return;
+  if (row.dataset.modalEdit) return;
 
   window.location.href = row.dataset.href;
 });
@@ -782,9 +813,117 @@ document.addEventListener('keydown', function (event) {
 
   const row = event.target.closest('.clickable-row[data-href]');
   if (!row || event.target !== row) return;
+  if (row.dataset.modalEdit) return;
 
   event.preventDefault();
   window.location.href = row.dataset.href;
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+  const formModal = document.getElementById('resourceFormModal');
+  const form = document.getElementById('resourceForm');
+  const formTitle = document.getElementById('resourceFormTitle');
+  const formSubtitle = document.getElementById('resourceFormSubtitle');
+  const confirmModal = document.getElementById('resourceConfirmModal');
+  const confirmForm = document.getElementById('resourceConfirmForm');
+  const confirmText = document.getElementById('resourceConfirmText');
+
+  if (!formModal || !form) return;
+
+  function show(modal) {
+    modal?.classList.add('show');
+    modal?.setAttribute('aria-hidden', 'false');
+  }
+
+  function hide(modal) {
+    modal?.classList.remove('show');
+    modal?.setAttribute('aria-hidden', 'true');
+  }
+
+  function setFieldState(mode) {
+    form.querySelectorAll('[data-edit-readonly="true"]').forEach(field => {
+      field.readOnly = mode === 'edit';
+    });
+    form.querySelectorAll('[data-create-only], [data-edit-only]').forEach(section => {
+      const isCreateOnly = section.hasAttribute('data-create-only');
+      const visible = isCreateOnly ? mode === 'create' : mode === 'edit';
+      section.hidden = !visible;
+      section.querySelectorAll('input, select, textarea, button').forEach(field => {
+        field.disabled = !visible;
+      });
+    });
+  }
+
+  function fillFormFromRow(row) {
+    form.querySelectorAll('[name]').forEach(field => {
+      if (field.type === 'hidden' && field.name === 'csrfmiddlewaretoken') return;
+      const value = row.getAttribute('data-field-' + field.name);
+      if (value !== null) {
+        if (field.type === 'checkbox') {
+          field.checked = value === '1' || value === 'true' || value === 'True';
+        } else {
+          field.value = value;
+        }
+      }
+    });
+  }
+
+  function openCreate(button) {
+    form.reset();
+    form.action = button.dataset.createUrl;
+    formTitle.textContent = button.dataset.title || 'Ajouter';
+    formSubtitle.textContent = button.dataset.subtitle || '';
+    setFieldState('create');
+    show(formModal);
+    form.querySelector('[name]:not([type="hidden"])')?.focus();
+  }
+
+  function openEdit(row) {
+    form.reset();
+    form.action = row.dataset.href;
+    fillFormFromRow(row);
+    formTitle.textContent = row.dataset.title || 'Modifier';
+    formSubtitle.textContent = row.dataset.subtitle || '';
+    setFieldState('edit');
+    show(formModal);
+    form.querySelector('[name]:not([type="hidden"]):not([readonly])')?.focus();
+  }
+
+  document.querySelectorAll('[data-resource-create]').forEach(button => {
+    button.addEventListener('click', () => openCreate(button));
+  });
+
+  document.querySelectorAll('[data-resource-row]').forEach(row => {
+    row.addEventListener('click', event => {
+      if (event.target.closest('a, button, input, select, textarea, label, form, [data-row-ignore]')) return;
+      openEdit(row);
+    });
+    row.addEventListener('keydown', event => {
+      if ((event.key === 'Enter' || event.key === ' ') && event.target === row) {
+        event.preventDefault();
+        openEdit(row);
+      }
+    });
+  });
+
+  document.querySelectorAll('[data-resource-delete]').forEach(button => {
+    button.addEventListener('click', event => {
+      event.preventDefault();
+      confirmForm.action = button.dataset.deleteUrl;
+      confirmText.textContent = button.dataset.confirmText || 'Cet élément sera supprimé.';
+      show(confirmModal);
+    });
+  });
+
+  document.querySelectorAll('[data-resource-modal-close]').forEach(button => {
+    button.addEventListener('click', () => hide(button.closest('.resource-modal')));
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    hide(formModal);
+    hide(confirmModal);
+  });
 });
 </script>
 </body>
