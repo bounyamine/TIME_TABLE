@@ -7,7 +7,7 @@ from django.contrib.auth.views import LoginView
 from django.views.decorators.http import require_POST
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db.models import ProtectedError
+from django.db.models import ProtectedError, Q
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
@@ -192,8 +192,13 @@ def grille_edt(request: HttpRequest, semaine: str | None = None) -> HttpResponse
         "semaines_dispo": semaines_dispo,
         "est_cd": est_cd,
         "emplois_semaine": emplois_semaine,
-        "cours_modal": Cours.objects.select_related("ue", "option").all(),
-        "enseignants_modal": Utilisateur.objects.filter(role=Utilisateur.Role.ENSEIGNANT).order_by("nom", "prenom"),
+        "cours_modal": Cours.objects.select_related("ue", "option").filter(
+            Q(status=True) | Q(creneaux__emploiDuTemps__semaine=semaine_date)
+        ).distinct(),
+        "enseignants_modal": Utilisateur.objects.filter(
+            Q(is_active=True) | Q(creneauxEnseignes__emploiDuTemps__semaine=semaine_date),
+            role=Utilisateur.Role.ENSEIGNANT,
+        ).distinct().order_by("nom", "prenom"),
         "plages_modal": [p for p in PLAGES_HORAIRES if not p.get("pause")],
     })
 
@@ -243,8 +248,16 @@ def ajouter_creneau_grille(request: HttpRequest) -> HttpResponse:
                 )
                 creneau.full_clean()
                 creneau.save()
+                if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                    return JsonResponse({
+                        "message": "Créneau ajouté.",
+                        "redirect_url": _url_grille_emploi(emploi, creneau.salle_id),
+                        "delete_url": f"/emplois-du-temps/grille/creneaux/{creneau.pk}/supprimer/",
+                    })
                 messages.success(request, "Créneau ajouté avec succès.")
             except ValidationError as e:
+                if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                    return JsonResponse({"message": " ".join(e.messages)}, status=400)
                 for msg in e.messages:
                     messages.error(request, msg)
                 return render(request, "emploi_du_temps/grille/formulaire.html", {
@@ -255,6 +268,15 @@ def ajouter_creneau_grille(request: HttpRequest) -> HttpResponse:
                     "jours": JOURS_EDT,
                 })
             return redirect(f"/emplois-du-temps/grille/{semaine_lundi.isoformat()}/?salle_id={form.cleaned_data['salle'].pk}")
+
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            errors = []
+            for field_errors in form.errors.values():
+                errors.extend(field_errors)
+            return JsonResponse({
+                "message": " ".join(errors) or "Formulaire invalide.",
+                "errors": form.errors,
+            }, status=400)
 
         return render(request, "emploi_du_temps/grille/formulaire.html", {
             "form": form,
