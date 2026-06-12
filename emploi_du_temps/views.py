@@ -515,7 +515,7 @@ def copier_creneau(request: HttpRequest, pk: int) -> HttpResponse:
 #  RESSOURCES
 # ─────────────────────────────────────────────
 
-RESSOURCES_PAR_PAGE = 10
+RESSOURCES_PAR_PAGE = 7
 
 
 def _paginer_ressources(request: HttpRequest, queryset, par_page: int = RESSOURCES_PAR_PAGE):

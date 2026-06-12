@@ -33,17 +33,14 @@
       </thead>
       <tbody>
         {% for o in options %}
-        <tr>
+        <tr class="clickable-row" data-href="{% url 'option_modifier' o.pk %}" tabindex="0" role="link" aria-label="Modifier l'option {{ o.nom }}">
           <td class="td-bold">{{ o.nom }}</td>
           <td><span class="badge badge-blue">Niveau {{ o.niveau }}</span></td>
           <td><span class="badge badge-green"><span class="dot"></span>{{ o.cours.count }} cours</span></td>
           <td>
-            <div class="td-actions">
-              <a href="{% url 'option_modifier' o.pk %}" class="btn btn-outline btn-sm">
-                <i class="ti ti-pencil"></i> Modifier
-              </a>
-              <a href="{% url 'option_supprimer' o.pk %}" class="btn btn-danger-soft btn-sm">
-                <i class="ti ti-trash"></i> Supprimer
+            <div class="td-actions td-actions-icon">
+              <a href="{% url 'option_supprimer' o.pk %}" class="icon-action icon-action-danger" title="Supprimer" aria-label="Supprimer l'option {{ o.nom }}">
+                <i class="ti ti-trash" aria-hidden="true"></i>
               </a>
             </div>
           </td>

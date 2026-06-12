@@ -222,9 +222,19 @@ tbody tr{border-bottom:1px solid var(--gray-100);transition:background .12s}
 tbody tr:last-child{border-bottom:none}
 tbody tr:hover{background:var(--blue-light)}
 tbody td{padding:13px 18px;color:var(--gray-700);vertical-align:middle}
+.clickable-row{cursor:pointer}
+.clickable-row:focus-visible{outline:2px solid var(--blue);outline-offset:-2px;background:var(--blue-light)}
 .td-bold{font-weight:600;color:var(--gray-900)}
 .td-muted{color:var(--gray-500)}
 .td-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.td-actions-icon{justify-content:flex-end}
+.icon-action{
+  width:32px;height:32px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;
+  text-decoration:none;border:1px solid transparent;transition:all .18s;
+}
+.icon-action i{font-size:16px}
+.icon-action-danger{background:var(--red-light);color:var(--red);border-color:#FECACA}
+.icon-action-danger:hover{background:var(--red);color:#fff}
 
 /* ── PAGINATION ── */
 .pagination-bar{
@@ -741,24 +751,40 @@ document.addEventListener('DOMContentLoaded', function () {
 <script>
 document.addEventListener('click', function (event) {
   const button = event.target.closest('[data-password-toggle]');
-  if (!button) return;
+  if (button) {
+    const field = document.getElementById(button.dataset.passwordToggle);
+    if (!field) return;
 
-  const field = document.getElementById(button.dataset.passwordToggle);
-  if (!field) return;
+    const isHidden = field.type === 'password';
+    field.type = isHidden ? 'text' : 'password';
+    button.setAttribute('aria-pressed', isHidden ? 'true' : 'false');
+    button.setAttribute('aria-label', isHidden ? 'Cacher le mot de passe' : 'Afficher le mot de passe');
+    button.setAttribute('title', isHidden ? 'Cacher le mot de passe' : 'Afficher le mot de passe');
 
-  const isHidden = field.type === 'password';
-  field.type = isHidden ? 'text' : 'password';
-  button.setAttribute('aria-pressed', isHidden ? 'true' : 'false');
-  button.setAttribute('aria-label', isHidden ? 'Cacher le mot de passe' : 'Afficher le mot de passe');
-  button.setAttribute('title', isHidden ? 'Cacher le mot de passe' : 'Afficher le mot de passe');
+    const icon = button.querySelector('i');
+    if (icon) {
+      icon.classList.toggle('ti-eye', !isHidden);
+      icon.classList.toggle('ti-eye-off', isHidden);
+    }
 
-  const icon = button.querySelector('i');
-  if (icon) {
-    icon.classList.toggle('ti-eye', !isHidden);
-    icon.classList.toggle('ti-eye-off', isHidden);
+    field.focus({ preventScroll: true });
+    return;
   }
 
-  field.focus({ preventScroll: true });
+  const row = event.target.closest('.clickable-row[data-href]');
+  if (!row || event.target.closest('a, button, input, select, textarea, label, form, [data-row-ignore]')) return;
+
+  window.location.href = row.dataset.href;
+});
+
+document.addEventListener('keydown', function (event) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+
+  const row = event.target.closest('.clickable-row[data-href]');
+  if (!row || event.target !== row) return;
+
+  event.preventDefault();
+  window.location.href = row.dataset.href;
 });
 </script>
 </body>

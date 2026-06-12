@@ -32,16 +32,13 @@
       </thead>
       <tbody>
         {% for ue in ues %}
-        <tr>
+        <tr class="clickable-row" data-href="{% url 'ue_modifier' ue.codeUE %}" tabindex="0" role="link" aria-label="Modifier l'UE {{ ue.codeUE }}">
           <td><span class="badge badge-blue">{{ ue.codeUE }}</span></td>
           <td class="td-bold">{{ ue.intituleUE }}</td>
           <td>
-            <div class="td-actions">
-              <a href="{% url 'ue_modifier' ue.codeUE %}" class="btn btn-outline btn-sm">
-                <i class="ti ti-pencil"></i> Modifier
-              </a>
-              <a href="{% url 'ue_supprimer' ue.codeUE %}" class="btn btn-danger-soft btn-sm">
-                <i class="ti ti-trash"></i> Supprimer
+            <div class="td-actions td-actions-icon">
+              <a href="{% url 'ue_supprimer' ue.codeUE %}" class="icon-action icon-action-danger" title="Supprimer" aria-label="Supprimer l'UE {{ ue.codeUE }}">
+                <i class="ti ti-trash" aria-hidden="true"></i>
               </a>
             </div>
           </td>

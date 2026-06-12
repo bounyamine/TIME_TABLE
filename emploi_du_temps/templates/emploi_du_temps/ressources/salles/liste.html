@@ -33,17 +33,14 @@
       </thead>
       <tbody>
         {% for s in salles %}
-        <tr>
+        <tr class="clickable-row" data-href="{% url 'salle_modifier' s.pk %}" tabindex="0" role="link" aria-label="Modifier la salle {{ s.nom }}">
           <td class="td-bold">{{ s.nom }}</td>
           <td><span class="badge badge-blue">{{ s.site }}</span></td>
           <td><span class="badge badge-green"><span class="dot"></span>{{ s.capacite }} places</span></td>
           <td>
-            <div class="td-actions">
-              <a href="{% url 'salle_modifier' s.pk %}" class="btn btn-outline btn-sm">
-                <i class="ti ti-pencil"></i> Modifier
-              </a>
-              <a href="{% url 'salle_supprimer' s.pk %}" class="btn btn-danger-soft btn-sm">
-                <i class="ti ti-trash"></i> Supprimer
+            <div class="td-actions td-actions-icon">
+              <a href="{% url 'salle_supprimer' s.pk %}" class="icon-action icon-action-danger" title="Supprimer" aria-label="Supprimer la salle {{ s.nom }}">
+                <i class="ti ti-trash" aria-hidden="true"></i>
               </a>
             </div>
           </td>

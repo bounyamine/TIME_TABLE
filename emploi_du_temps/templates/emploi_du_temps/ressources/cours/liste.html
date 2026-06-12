@@ -58,12 +58,12 @@
       </thead>
       <tbody>
         {% for c in cours %}
-        <tr>
+        <tr class="clickable-row" data-href="{% url 'cours_modifier' c.pk %}" tabindex="0" role="link" aria-label="Modifier le cours {{ c.intitule }}">
           <td><span class="badge badge-blue">{{ c.codeCours }}</span></td>
           <td>{{ c.intitule }}</td>
           <td><span class="badge badge-green">{{ c.option.nom }}</span></td>
           <td>
-            <form class="status-toggle-form" method="post" action="{% url 'cours_basculer_statut' c.pk %}">
+            <form class="status-toggle-form" method="post" action="{% url 'cours_basculer_statut' c.pk %}" data-row-ignore>
               {% csrf_token %}
               <input type="hidden" name="next" value="{{ request.get_full_path }}">
               <button
@@ -80,12 +80,9 @@
             </form>
           </td>
           <td>
-            <div class="td-actions">
-              <a href="{% url 'cours_modifier' c.pk %}" class="btn btn-outline btn-sm">
-                <i class="ti ti-pencil"></i> Modifier
-              </a>
-              <a href="{% url 'cours_supprimer' c.pk %}" class="btn btn-danger-soft btn-sm">
-                <i class="ti ti-trash"></i> Supprimer
+            <div class="td-actions td-actions-icon">
+              <a href="{% url 'cours_supprimer' c.pk %}" class="icon-action icon-action-danger" title="Supprimer" aria-label="Supprimer le cours {{ c.intitule }}">
+                <i class="ti ti-trash" aria-hidden="true"></i>
               </a>
             </div>
           </td>
