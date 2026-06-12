@@ -6,11 +6,13 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.views.decorators.http import require_POST
 from django.core.exceptions import ValidationError
-from django.db.models import ProtectedError
+from django.core.paginator import Paginator
+from django.db.models import ProtectedError, Q
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from emploi_du_temps.forms import (
     CreneauDirectForm,
@@ -36,6 +38,22 @@ def accueil(request: HttpRequest) -> HttpResponse:
     if request.user.is_authenticated:
         return redirect("tableau_de_bord")
     return render(request, "emploi_du_temps/accueil.html")
+
+
+def inscription_etudiant(request: HttpRequest) -> HttpResponse:
+    if request.user.is_authenticated:
+        return redirect("tableau_de_bord")
+
+    if request.method == "POST":
+        form = UtilisateurRoleCreationForm(request.POST, role=Utilisateur.Role.ETUDIANT)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Votre compte étudiant a été créé. Vous pouvez maintenant vous connecter.")
+            return redirect("login")
+    else:
+        form = UtilisateurRoleCreationForm(role=Utilisateur.Role.ETUDIANT)
+
+    return render(request, "registration/inscription_etudiant.html", {"form": form})
 
 
 @login_required
@@ -174,12 +192,20 @@ def grille_edt(request: HttpRequest, semaine: str | None = None) -> HttpResponse
         "semaines_dispo": semaines_dispo,
         "est_cd": est_cd,
         "emplois_semaine": emplois_semaine,
+        "cours_modal": Cours.objects.select_related("ue", "option").filter(
+            Q(status=True) | Q(creneaux__emploiDuTemps__semaine=semaine_date)
+        ).distinct(),
+        "enseignants_modal": Utilisateur.objects.filter(
+            Q(is_active=True) | Q(creneauxEnseignes__emploiDuTemps__semaine=semaine_date),
+            role=Utilisateur.Role.ENSEIGNANT,
+        ).distinct().order_by("nom", "prenom"),
+        "plages_modal": [p for p in PLAGES_HORAIRES if not p.get("pause")],
     })
 
 
 @cd_requis
 def ajouter_creneau_grille(request: HttpRequest) -> HttpResponse:
-    """Formulaire d'ajout d'un créneau depuis la grille (équivalent PHP /edt/create)."""
+    """Formulaire d'ajout d'un créneau depuis la grille"""
     semaine_str = request.GET.get("semaine") or request.POST.get("semaine") or str(date.today())
     semaine_date = _get_lundi(semaine_str)
 
@@ -222,8 +248,16 @@ def ajouter_creneau_grille(request: HttpRequest) -> HttpResponse:
                 )
                 creneau.full_clean()
                 creneau.save()
+                if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                    return JsonResponse({
+                        "message": "Créneau ajouté.",
+                        "redirect_url": _url_grille_emploi(emploi, creneau.salle_id),
+                        "delete_url": f"/emplois-du-temps/grille/creneaux/{creneau.pk}/supprimer/",
+                    })
                 messages.success(request, "Créneau ajouté avec succès.")
             except ValidationError as e:
+                if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                    return JsonResponse({"message": " ".join(e.messages)}, status=400)
                 for msg in e.messages:
                     messages.error(request, msg)
                 return render(request, "emploi_du_temps/grille/formulaire.html", {
@@ -234,6 +268,15 @@ def ajouter_creneau_grille(request: HttpRequest) -> HttpResponse:
                     "jours": JOURS_EDT,
                 })
             return redirect(f"/emplois-du-temps/grille/{semaine_lundi.isoformat()}/?salle_id={form.cleaned_data['salle'].pk}")
+
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            errors = []
+            for field_errors in form.errors.values():
+                errors.extend(field_errors)
+            return JsonResponse({
+                "message": " ".join(errors) or "Formulaire invalide.",
+                "errors": form.errors,
+            }, status=400)
 
         return render(request, "emploi_du_temps/grille/formulaire.html", {
             "form": form,
@@ -275,13 +318,28 @@ def modifier_creneau_grille(request: HttpRequest, pk: int) -> HttpResponse:
                 creneau.save()
                 messages.success(request, "Créneau modifié avec succès.")
             except ValidationError as e:
+                if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                    return JsonResponse({"message": " ".join(e.messages)}, status=400)
                 for msg in e.messages:
                     messages.error(request, msg)
                 return render(request, "emploi_du_temps/grille/formulaire.html", {
                     "form": form, "semaine": semaine, "titre": "Modifier un créneau",
                     "creneau": creneau, "plages": PLAGES_HORAIRES, "jours": JOURS_EDT,
                 })
+            if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                return JsonResponse({
+                    "message": "Créneau modifié.",
+                    "redirect_url": _url_grille_emploi(creneau.emploiDuTemps, creneau.salle_id),
+                })
             return redirect(f"/emplois-du-temps/grille/{semaine.isoformat()}/?salle_id={creneau.salle_id}")
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            errors = []
+            for field_errors in form.errors.values():
+                errors.extend(field_errors)
+            return JsonResponse({
+                "message": " ".join(errors) or "Formulaire invalide.",
+                "errors": form.errors,
+            }, status=400)
     else:
         # Préremplir le formulaire avec les valeurs existantes
         # Trouver la plage correspondante
@@ -308,12 +366,19 @@ def modifier_creneau_grille(request: HttpRequest, pk: int) -> HttpResponse:
 @cd_requis
 def supprimer_creneau_grille(request: HttpRequest, pk: int) -> HttpResponse:
     """Supprimer un créneau depuis la grille."""
-    creneau = get_object_or_404(Creneau.objects.select_related("emploiDuTemps"), pk=pk)
+    creneau = get_object_or_404(Creneau.objects.select_related("emploiDuTemps", "salle"), pk=pk)
     semaine = creneau.emploiDuTemps.semaine
+    emploi = creneau.emploiDuTemps
+    salle_id = creneau.salle_id
     if request.method == "POST":
         creneau.delete()
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({
+                "message": "Créneau supprimé.",
+                "redirect_url": _url_grille_emploi(emploi, salle_id),
+            })
         messages.success(request, "Créneau supprimé.")
-        return redirect(f"/emplois-du-temps/grille/{semaine.isoformat()}/?salle_id={creneau.salle_id}")
+        return redirect(f"/emplois-du-temps/grille/{semaine.isoformat()}/?salle_id={salle_id}")
     return render(request, "emploi_du_temps/grille/confirmer_suppression.html", {
         "creneau": creneau, "semaine": semaine,
     })
@@ -428,72 +493,183 @@ def ajax_conflits(request: HttpRequest) -> JsonResponse:
 @login_required
 def ajax_cours_par_option(request: HttpRequest, option_id: int) -> JsonResponse:
     """Retourne les cours d'une option (équivalent PHP /edt/cours-par-filiere)."""
-    cours = list(Cours.objects.filter(option_id=option_id).values("id", "codeCours", "intitule", "ue_id"))    
+    cours = list(
+        Cours.objects.filter(option_id=option_id, status=True).values(
+            "id",
+            "codeCours",
+            "intitule",
+            "ue_id",
+        )
+    )
     return JsonResponse(cours, safe=False)
 
 
-def _reponse_edition_cellule(request, emploi, message, statut=200):
+def _url_grille_emploi(emploi, salle_id=None):
+    url = f"/emplois-du-temps/grille/{emploi.semaine.isoformat()}/"
+    if salle_id:
+        url += f"?salle_id={salle_id}"
+    return url
+
+
+def _reponse_edition_cellule(request, emploi, message, statut=200, salle_id=None, extra=None):
+    redirect_url = _url_grille_emploi(emploi, salle_id)
     if request.headers.get("x-requested-with") == "XMLHttpRequest":
-        return JsonResponse({"message": message}, status=statut)
+        payload = {"message": message, "redirect_url": redirect_url}
+        if extra:
+            payload.update(extra)
+        return JsonResponse(payload, status=statut)
     if statut >= 400:
         messages.error(request, message)
     else:
         messages.success(request, message)
-    return redirect("editeur_emploi_du_temps", pk=emploi.pk)
+    return redirect(redirect_url)
+
+
+def _salle_cible_depuis_post(request: HttpRequest, salle_actuelle: Salle) -> Salle | None:
+    salle_id = request.POST.get("salle_id") or request.POST.get("salle")
+    if not salle_id:
+        return salle_actuelle
+    try:
+        return Salle.objects.get(pk=salle_id)
+    except (Salle.DoesNotExist, TypeError, ValueError):
+        return None
 
 
 @cd_requis
 def deplacer_creneau(request: HttpRequest, pk: int) -> HttpResponse:
-    creneau = get_object_or_404(Creneau.objects.select_related("emploiDuTemps"), pk=pk)
+    creneau = get_object_or_404(Creneau.objects.select_related("emploiDuTemps", "salle"), pk=pk)
     emploi = creneau.emploiDuTemps
     if request.method != "POST":
-        return redirect("editeur_emploi_du_temps", pk=emploi.pk)
+        return redirect(_url_grille_emploi(emploi, creneau.salle_id))
     plage = trouver_plage(request.POST.get("plage", ""))
     jour = request.POST.get("jour", "")
     if not plage or plage.get("pause") or jour not in dict(JOURS_EDT):
-        return _reponse_edition_cellule(request, emploi, "Plage ou jour invalide.", 400)
+        return _reponse_edition_cellule(request, emploi, "Plage ou jour invalide.", 400, creneau.salle_id)
+    salle = _salle_cible_depuis_post(request, creneau.salle)
+    if salle is None:
+        return _reponse_edition_cellule(request, emploi, "Salle invalide.", 400, creneau.salle_id)
     creneau.jour = jour
     creneau.heureDebut = plage["debut"]
     creneau.heureFin = plage["fin"]
+    creneau.salle = salle
     try:
         creneau.full_clean()
     except ValidationError as e:
-        return _reponse_edition_cellule(request, emploi, " ".join(e.messages), 400)
+        return _reponse_edition_cellule(request, emploi, " ".join(e.messages), 400, salle.pk)
     creneau.save()
-    return _reponse_edition_cellule(request, emploi, "Créneau déplacé.")
+    return _reponse_edition_cellule(request, emploi, "Créneau déplacé.", salle_id=salle.pk)
 
 
 @cd_requis
 def copier_creneau(request: HttpRequest, pk: int) -> HttpResponse:
-    source = get_object_or_404(Creneau.objects.select_related("emploiDuTemps"), pk=pk)
+    source = get_object_or_404(Creneau.objects.select_related("emploiDuTemps", "salle"), pk=pk)
     emploi = source.emploiDuTemps
     if request.method != "POST":
-        return redirect("editeur_emploi_du_temps", pk=emploi.pk)
+        return redirect(_url_grille_emploi(emploi, source.salle_id))
     plage = trouver_plage(request.POST.get("plage", ""))
     jour = request.POST.get("jour", "")
     if not plage or plage.get("pause") or jour not in dict(JOURS_EDT):
-        return _reponse_edition_cellule(request, emploi, "Plage ou jour invalide.", 400)
+        return _reponse_edition_cellule(request, emploi, "Plage ou jour invalide.", 400, source.salle_id)
+    salle = _salle_cible_depuis_post(request, source.salle)
+    if salle is None:
+        return _reponse_edition_cellule(request, emploi, "Salle invalide.", 400, source.salle_id)
     copie = Creneau(
         emploiDuTemps=emploi, cours=source.cours,
-        enseignant=source.enseignant, salle=source.salle, option=source.option,
+        enseignant=source.enseignant, salle=salle, option=source.option,
         jour=jour, heureDebut=plage["debut"], heureFin=plage["fin"],
     )
     try:
         copie.full_clean()
     except ValidationError as e:
-        return _reponse_edition_cellule(request, emploi, " ".join(e.messages), 400)
+        return _reponse_edition_cellule(request, emploi, " ".join(e.messages), 400, salle.pk)
     copie.save()
-    return _reponse_edition_cellule(request, emploi, "Créneau copié.")
+    return _reponse_edition_cellule(
+        request,
+        emploi,
+        "Créneau copié.",
+        salle_id=salle.pk,
+        extra={"delete_url": f"/emplois-du-temps/grille/creneaux/{copie.pk}/supprimer/"},
+    )
+
+
+@cd_requis
+@require_POST
+def restaurer_creneau(request: HttpRequest) -> HttpResponse:
+    semaine_date = _get_lundi(request.POST.get("semaine"))
+    plage = trouver_plage(request.POST.get("plage", ""))
+    jour = request.POST.get("jour", "")
+    if not plage or plage.get("pause") or jour not in dict(JOURS_EDT):
+        return JsonResponse({"message": "Plage ou jour invalide."}, status=400)
+
+    try:
+        cours = Cours.objects.get(pk=request.POST.get("cours_id"))
+        enseignant = Utilisateur.objects.get(pk=request.POST.get("enseignant_id"), role=Utilisateur.Role.ENSEIGNANT)
+        salle = Salle.objects.get(pk=request.POST.get("salle_id"))
+    except (Cours.DoesNotExist, Utilisateur.DoesNotExist, Salle.DoesNotExist, TypeError, ValueError):
+        return JsonResponse({"message": "Données du créneau invalides."}, status=400)
+
+    emploi, _ = EmploiDuTemps.objects.get_or_create(
+        semaine=semaine_date,
+        defaults={"creePar": request.user, "statut": EmploiDuTemps.Statut.BROUILLON},
+    )
+    creneau = Creneau(
+        emploiDuTemps=emploi,
+        jour=jour,
+        heureDebut=plage["debut"],
+        heureFin=plage["fin"],
+        cours=cours,
+        enseignant=enseignant,
+        salle=salle,
+        option=cours.option,
+    )
+    try:
+        creneau.full_clean()
+    except ValidationError as e:
+        return JsonResponse({"message": " ".join(e.messages)}, status=400)
+    creneau.save()
+    return JsonResponse({
+        "message": "Créneau restauré.",
+        "redirect_url": _url_grille_emploi(emploi, salle.pk),
+    })
 
 
 # ─────────────────────────────────────────────
 #  RESSOURCES
 # ─────────────────────────────────────────────
 
+RESSOURCES_PAR_PAGE = 7
+
+
+def _paginer_ressources(request: HttpRequest, queryset, par_page: int = RESSOURCES_PAR_PAGE):
+    paginator = Paginator(queryset, par_page)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    query_params = request.GET.copy()
+    query_params.pop("page", None)
+    return page_obj, query_params.urlencode()
+
+
+def _redirect_apres_action(request: HttpRequest, fallback: str):
+    next_url = request.POST.get("next", "")
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(next_url)
+    return redirect(fallback)
+
 
 def _utilisateur_liste(request, role: str, template: str, context_name: str):
-    utilisateurs = Utilisateur.objects.filter(role=role).select_related("option")
-    return render(request, template, {context_name: utilisateurs})
+    utilisateurs = Utilisateur.objects.filter(role=role).select_related("option").order_by("nom", "prenom", "username")
+    page_obj, pagination_query = _paginer_ressources(request, utilisateurs)
+    context = {
+        context_name: page_obj.object_list,
+        "page_obj": page_obj,
+        "pagination_query": pagination_query,
+    }
+    if role == Utilisateur.Role.ETUDIANT:
+        context["options"] = Option.objects.all()
+    return render(request, template, context)
 
 
 def _utilisateur_creer(request, role: str, template: str, redirect_name: str, label: str):
@@ -568,6 +744,18 @@ def enseignant_modifier(request, pk):
 
 
 @cd_requis
+@require_POST
+def enseignant_basculer_statut(request, pk):
+    enseignant = get_object_or_404(Utilisateur, pk=pk, role=Utilisateur.Role.ENSEIGNANT)
+    enseignant.is_active = not enseignant.is_active
+    enseignant.save(update_fields=["is_active"])
+
+    statut = "activé" if enseignant.is_active else "désactivé"
+    messages.success(request, f"Enseignant {enseignant.nom} {enseignant.prenom} {statut}.")
+    return _redirect_apres_action(request, "enseignant_liste")
+
+
+@cd_requis
 def enseignant_supprimer(request, pk):
     return _utilisateur_supprimer(
         request,
@@ -579,10 +767,74 @@ def enseignant_supprimer(request, pk):
         "enseignant",
     )
 
+
+@cd_requis
+def etudiant_liste(request):
+    return _utilisateur_liste(
+        request,
+        Utilisateur.Role.ETUDIANT,
+        "emploi_du_temps/ressources/etudiants/liste.html",
+        "etudiants",
+    )
+
+
+@cd_requis
+def etudiant_creer(request):
+    return _utilisateur_creer(
+        request,
+        Utilisateur.Role.ETUDIANT,
+        "emploi_du_temps/ressources/etudiants/form.html",
+        "etudiant_liste",
+        "Étudiant",
+    )
+
+
+@cd_requis
+def etudiant_modifier(request, pk):
+    return _utilisateur_modifier(
+        request,
+        pk,
+        Utilisateur.Role.ETUDIANT,
+        "emploi_du_temps/ressources/etudiants/form.html",
+        "etudiant_liste",
+        "Étudiant",
+    )
+
+
+@cd_requis
+@require_POST
+def etudiant_basculer_statut(request, pk):
+    etudiant = get_object_or_404(Utilisateur, pk=pk, role=Utilisateur.Role.ETUDIANT)
+    etudiant.is_active = not etudiant.is_active
+    etudiant.save(update_fields=["is_active"])
+
+    statut = "activé" if etudiant.is_active else "désactivé"
+    messages.success(request, f"Étudiant {etudiant.nom} {etudiant.prenom} {statut}.")
+    return _redirect_apres_action(request, "etudiant_liste")
+
+
+@cd_requis
+def etudiant_supprimer(request, pk):
+    return _utilisateur_supprimer(
+        request,
+        pk,
+        Utilisateur.Role.ETUDIANT,
+        "emploi_du_temps/ressources/etudiants/confirmer_suppression.html",
+        "etudiant_liste",
+        "Étudiant",
+        "etudiant",
+    )
+
+
 @cd_requis
 def ue_liste(request):
     ues = UE.objects.prefetch_related("cours").all()
-    return render(request, "emploi_du_temps/ressources/ues/liste.html", {"ues": ues})
+    page_obj, pagination_query = _paginer_ressources(request, ues)
+    return render(request, "emploi_du_temps/ressources/ues/liste.html", {
+        "ues": page_obj.object_list,
+        "page_obj": page_obj,
+        "pagination_query": pagination_query,
+    })
 
 
 @cd_requis
@@ -632,7 +884,14 @@ def ue_supprimer(request, pk):
 @cd_requis
 def cours_liste(request):
     cours = Cours.objects.select_related("ue", "option").all()
-    return render(request, "emploi_du_temps/ressources/cours/liste.html", {"cours": cours})
+    page_obj, pagination_query = _paginer_ressources(request, cours)
+    return render(request, "emploi_du_temps/ressources/cours/liste.html", {
+        "cours": page_obj.object_list,
+        "page_obj": page_obj,
+        "pagination_query": pagination_query,
+        "options": Option.objects.all(),
+        "ues": UE.objects.prefetch_related("cours").all(),
+    })
 
 @cd_requis
 def cours_creer(request):
@@ -679,6 +938,19 @@ def cours_modifier(request, pk):
             return redirect("cours_liste")
     return render(request, "emploi_du_temps/ressources/cours/form.html", {"action": "Modifier", "cours": cours, "options": options, "ues": ues})
 
+
+@cd_requis
+@require_POST
+def cours_basculer_statut(request, pk):
+    cours = get_object_or_404(Cours, pk=pk)
+    cours.status = not cours.status
+    cours.save(update_fields=["status"])
+
+    statut = "activé" if cours.status else "désactivé"
+    messages.success(request, f"Cours {cours.intitule} {statut}.")
+    return _redirect_apres_action(request, "cours_liste")
+
+
 @cd_requis
 def cours_supprimer(request, pk):
     cours = get_object_or_404(Cours, pk=pk)
@@ -695,7 +967,12 @@ def cours_supprimer(request, pk):
 @cd_requis
 def salle_liste(request):
     salles = Salle.objects.all()
-    return render(request, "emploi_du_temps/ressources/salles/liste.html", {"salles": salles})
+    page_obj, pagination_query = _paginer_ressources(request, salles)
+    return render(request, "emploi_du_temps/ressources/salles/liste.html", {
+        "salles": page_obj.object_list,
+        "page_obj": page_obj,
+        "pagination_query": pagination_query,
+    })
 
 @cd_requis
 def salle_creer(request):
@@ -739,7 +1016,12 @@ def salle_supprimer(request, pk):
 @cd_requis
 def option_liste(request):
     options = Option.objects.all()
-    return render(request, "emploi_du_temps/ressources/options/liste.html", {"options": options})
+    page_obj, pagination_query = _paginer_ressources(request, options)
+    return render(request, "emploi_du_temps/ressources/options/liste.html", {
+        "options": page_obj.object_list,
+        "page_obj": page_obj,
+        "pagination_query": pagination_query,
+    })
 
 @cd_requis
 def option_creer(request):

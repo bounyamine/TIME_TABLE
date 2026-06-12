@@ -7,18 +7,18 @@
     <div class="page-icon"><i class="ti ti-components"></i></div>
     <div>
       <h1 class="page-title">Unités d’enseignement</h1>
-      <p class="page-sub">Gérez les UE et leurs cours associés</p>
+      <p class="page-sub">Gérez les UE</p>
     </div>
   </div>
-  <a href="{% url 'ue_creer' %}" class="btn btn-success">
+  <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'ue_creer' %}" data-title="Nouvelle UE" data-subtitle="Renseignez le code et l'intitulé de l'unité d'enseignement">
     <i class="ti ti-plus"></i> Nouvelle UE
-  </a>
+  </button>
 </div>
 
 <div class="card">
   <div class="card-head">
     <span class="card-head-title">Liste des UE</span>
-    <span class="count-pill">{{ ues.count }} au total</span>
+    <span class="count-pill">{{ page_obj.paginator.count }} au total</span>
   </div>
   {% if ues %}
   <div class="table-wrap">
@@ -27,30 +27,18 @@
         <tr>
           <th>Code UE</th>
           <th>Intitulé UE</th>
-          <th>Cours associés</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for ue in ues %}
-        <tr>
+        <tr class="clickable-row" data-resource-row data-modal-edit="true" data-href="{% url 'ue_modifier' ue.codeUE %}" data-title="Modifier l'UE {{ ue.codeUE }}" data-subtitle="Le code UE reste verrouillé en modification" data-field-codeUE="{{ ue.codeUE }}" data-field-intituleUE="{{ ue.intituleUE }}" tabindex="0" role="link" aria-label="Modifier l'UE {{ ue.codeUE }}">
           <td><span class="badge badge-blue">{{ ue.codeUE }}</span></td>
           <td class="td-bold">{{ ue.intituleUE }}</td>
           <td>
-            <span class="badge badge-orange"><span class="dot"></span>{{ ue.cours.count }}/2</span>
-            {% for cours in ue.cours.all %}
-              <div style="margin-top:4px;">{{ cours.intitule }}</div>
-            {% empty %}
-              <div style="margin-top:4px;color:var(--gray-500);">Aucun cours rattaché</div>
-            {% endfor %}
-          </td>
-          <td>
-            <div class="td-actions">
-              <a href="{% url 'ue_modifier' ue.codeUE %}" class="btn btn-outline btn-sm">
-                <i class="ti ti-pencil"></i> Modifier
-              </a>
-              <a href="{% url 'ue_supprimer' ue.codeUE %}" class="btn btn-danger-soft btn-sm">
-                <i class="ti ti-trash"></i> Supprimer
+            <div class="td-actions td-actions-icon">
+              <a href="{% url 'ue_supprimer' ue.codeUE %}" class="icon-action icon-action-danger" data-resource-delete data-delete-url="{% url 'ue_supprimer' ue.codeUE %}" data-confirm-text="Supprimer l'UE {{ ue.codeUE }} - {{ ue.intituleUE }} ?" title="Supprimer" aria-label="Supprimer l'UE {{ ue.codeUE }}">
+                <i class="ti ti-trash" aria-hidden="true"></i>
               </a>
             </div>
           </td>
@@ -59,15 +47,72 @@
       </tbody>
     </table>
   </div>
+  {% include "emploi_du_temps/includes/pagination.html" %}
   {% else %}
   <div class="empty-state">
     <div class="empty-ico"><i class="ti ti-components"></i></div>
     <h3 class="empty-title">Aucune UE</h3>
     <p class="empty-text">Ajoutez les unités d’enseignement avant de créer les cours.</p>
-    <a href="{% url 'ue_creer' %}" class="btn btn-success">
+    <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'ue_creer' %}" data-title="Nouvelle UE" data-subtitle="Renseignez le code et l'intitulé de l'unité d'enseignement">
       <i class="ti ti-plus"></i> Ajouter une UE
-    </a>
+    </button>
   </div>
   {% endif %}
+</div>
+
+<div class="resource-modal" id="resourceFormModal" aria-hidden="true">
+  <div class="resource-modal-backdrop" data-resource-modal-close></div>
+  <div class="resource-modal-panel" role="dialog" aria-modal="true" aria-labelledby="resourceFormTitle">
+    <div class="resource-modal-head">
+      <div>
+        <h2 id="resourceFormTitle">Nouvelle UE</h2>
+        <p id="resourceFormSubtitle">Renseignez les informations de l'UE</p>
+      </div>
+      <button type="button" class="resource-modal-close" data-resource-modal-close aria-label="Fermer">
+        <i class="ti ti-x"></i>
+      </button>
+    </div>
+    <form id="resourceForm" class="resource-modal-body" method="post" action="{% url 'ue_creer' %}">
+      {% csrf_token %}
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="modalCodeUE">Code UE <span class="form-required">*</span></label>
+          <input class="form-control" type="text" id="modalCodeUE" name="codeUE" data-edit-readonly="true" placeholder="Ex : GLO418" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="modalIntituleUE">Intitulé UE <span class="form-required">*</span></label>
+          <input class="form-control" type="text" id="modalIntituleUE" name="intituleUE" placeholder="Ex : Développement Web et mobiles" required>
+        </div>
+      </div>
+      <div class="resource-modal-actions">
+        <button type="button" class="btn btn-secondary" data-resource-modal-close>Annuler</button>
+        <button type="submit" class="btn btn-success"><i class="ti ti-device-floppy"></i> Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="resource-modal" id="resourceConfirmModal" aria-hidden="true">
+  <div class="resource-modal-backdrop" data-resource-modal-close></div>
+  <div class="resource-modal-panel is-confirm" role="dialog" aria-modal="true" aria-labelledby="resourceConfirmTitle">
+    <div class="resource-modal-head">
+      <div>
+        <h2 id="resourceConfirmTitle">Confirmer la suppression</h2>
+        <p>Cette action peut être bloquée si l'élément est utilisé.</p>
+      </div>
+      <button type="button" class="resource-modal-close" data-resource-modal-close aria-label="Fermer">
+        <i class="ti ti-x"></i>
+      </button>
+    </div>
+    <div class="resource-confirm-body">
+      <div class="resource-confirm-icon"><i class="ti ti-trash"></i></div>
+      <p id="resourceConfirmText">Cet élément sera supprimé.</p>
+    </div>
+    <form id="resourceConfirmForm" method="post" class="resource-modal-actions resource-confirm-actions">
+      {% csrf_token %}
+      <button type="button" class="btn btn-secondary" data-resource-modal-close>Annuler</button>
+      <button type="submit" class="btn btn-danger-soft"><i class="ti ti-trash"></i> Supprimer</button>
+    </form>
+  </div>
 </div>
 {% endblock %}

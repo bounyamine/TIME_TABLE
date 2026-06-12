@@ -142,7 +142,7 @@
 
       <div class="form-group">
         <label class="form-label" for="id_username">
-          <i class="ti ti-user"></i> Nom d'utilisateur
+          <i class="ti ti-user"></i> Nom d'utilisateur <span class="form-required">*</span>
         </label>
         <input
           type="text"
@@ -153,6 +153,7 @@
           autocomplete="username"
           autofocus
           value="{{ form.username.value|default:'' }}"
+          required
         />
         {% if form.username.errors %}
         <div class="field-errors">{{ form.username.errors|join:", " }}</div>
@@ -161,16 +162,22 @@
 
       <div class="form-group">
         <label class="form-label" for="id_password">
-          <i class="ti ti-lock"></i> Mot de passe
+          <i class="ti ti-lock"></i> Mot de passe <span class="form-required">*</span>
         </label>
-        <input
-          type="password"
-          id="id_password"
-          name="password"
-          class="form-control"
-          placeholder="••••••••"
-          autocomplete="current-password"
-        />
+        <div class="password-field">
+          <input
+            type="password"
+            id="id_password"
+            name="password"
+            class="form-control"
+            placeholder="••••••••"
+            autocomplete="current-password"
+            required
+          />
+          <button type="button" class="password-toggle" data-password-toggle="id_password" aria-label="Afficher le mot de passe" aria-pressed="false" title="Afficher le mot de passe">
+            <i class="ti ti-eye" aria-hidden="true"></i>
+          </button>
+        </div>
         {% if form.password.errors %}
         <div class="field-errors">{{ form.password.errors|join:", " }}</div>
         {% endif %}
@@ -182,6 +189,10 @@
     </form>
 
     <div class="login-footer">
+      <a href="{% url 'inscription_etudiant' %}">
+        <i class="ti ti-user-plus"></i> Créer un compte étudiant
+      </a>
+      <br><br>
       <a href="{% url 'accueil' %}">
         <i class="ti ti-arrow-left"></i> Retour à l'accueil
       </a>

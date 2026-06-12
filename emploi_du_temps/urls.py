@@ -5,6 +5,7 @@ urlpatterns = [
     # ── Auth ──────────────────────────────────────
     path("", views.accueil, name="accueil"),
     path("connexion/", views.ConnexionView.as_view(), name="login"),
+    path("inscription_etudiant/etudiant/", views.inscription_etudiant, name="inscription_etudiant"),
     path("deconnexion/", views.deconnexion, name="logout"),
     path("tableau-de-bord/", views.tableau_de_bord, name="tableau_de_bord"),
 
@@ -15,6 +16,7 @@ urlpatterns = [
     path("emplois-du-temps/grille/creneaux/<int:pk>/supprimer/", views.supprimer_creneau_grille, name="supprimer_creneau_grille"),
     path("emplois-du-temps/grille/creneaux/<int:pk>/deplacer/", views.deplacer_creneau, name="deplacer_creneau_grille"),
     path("emplois-du-temps/grille/creneaux/<int:pk>/copier/", views.copier_creneau, name="copier_creneau_grille"),
+    path("emplois-du-temps/grille/creneaux/restaurer/", views.restaurer_creneau, name="restaurer_creneau_grille"),
     path("emplois-du-temps/grille/ajax/conflits/", views.ajax_conflits, name="ajax_conflits"),
     path("emplois-du-temps/grille/publier-semaine/", views.publier_semaine, name="publier_semaine"),
     path("emplois-du-temps/grille/depublier-semaine/", views.depublier_semaine, name="depublier_semaine"),
@@ -25,7 +27,14 @@ urlpatterns = [
     path("enseignants/", views.enseignant_liste, name="enseignant_liste"),
     path("enseignants/nouveau/", views.enseignant_creer, name="enseignant_creer"),
     path("enseignants/<int:pk>/modifier/", views.enseignant_modifier, name="enseignant_modifier"),
+    path("enseignants/<int:pk>/statut/", views.enseignant_basculer_statut, name="enseignant_basculer_statut"),
     path("enseignants/<int:pk>/supprimer/", views.enseignant_supprimer, name="enseignant_supprimer"),
+
+    path("etudiants/", views.etudiant_liste, name="etudiant_liste"),
+    path("etudiants/nouveau/", views.etudiant_creer, name="etudiant_creer"),
+    path("etudiants/<int:pk>/modifier/", views.etudiant_modifier, name="etudiant_modifier"),
+    path("etudiants/<int:pk>/statut/", views.etudiant_basculer_statut, name="etudiant_basculer_statut"),
+    path("etudiants/<int:pk>/supprimer/", views.etudiant_supprimer, name="etudiant_supprimer"),
 
     path("ues/", views.ue_liste, name="ue_liste"),
     path("ues/nouvelle/", views.ue_creer, name="ue_creer"),
@@ -35,6 +44,7 @@ urlpatterns = [
     path("cours/", views.cours_liste, name="cours_liste"),
     path("cours/nouveau/", views.cours_creer, name="cours_creer"),
     path("cours/<str:pk>/modifier/", views.cours_modifier, name="cours_modifier"),
+    path("cours/<str:pk>/statut/", views.cours_basculer_statut, name="cours_basculer_statut"),
     path("cours/<str:pk>/supprimer/", views.cours_supprimer, name="cours_supprimer"),
 
     path("salles/", views.salle_liste, name="salle_liste"),

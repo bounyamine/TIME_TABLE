@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block titre %}Enseignants — EDT ENSPM{% endblock %}
+{% block titre %}Étudiants — EDT ENSPM{% endblock %}
 {% block contenu %}
 <style>
 .status-toggle-form{margin:0}
@@ -28,23 +28,23 @@
 
 <div class="page-header">
   <div class="page-header-left">
-    <div class="page-icon"><i class="ti ti-users"></i></div>
+    <div class="page-icon"><i class="ti ti-school"></i></div>
     <div>
-      <h1 class="page-title">Enseignants</h1>
-      <p class="page-sub">Gérez les enseignants du département</p>
+      <h1 class="page-title">Étudiants</h1>
+      <p class="page-sub">Gérez les étudiants et leur option</p>
     </div>
   </div>
-  <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'enseignant_creer' %}" data-title="Nouvel enseignant" data-subtitle="Créez le compte enseignant">
-    <i class="ti ti-plus"></i> Nouvel enseignant
+  <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'etudiant_creer' %}" data-title="Nouvel étudiant" data-subtitle="Créez le compte étudiant">
+    <i class="ti ti-plus"></i> Nouvel étudiant
   </button>
 </div>
 
 <div class="card">
   <div class="card-head">
-    <span class="card-head-title">Liste des enseignants</span>
+    <span class="card-head-title">Liste des étudiants</span>
     <span class="count-pill">{{ page_obj.paginator.count }} au total</span>
   </div>
-  {% if enseignants %}
+  {% if etudiants %}
   <div class="table-wrap">
     <table>
       <thead>
@@ -52,24 +52,32 @@
           <th>Nom complet</th>
           <th>Identifiant</th>
           <th>Email</th>
+          <th>Option</th>
           <th>Statut</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
-        {% for e in enseignants %}
-        <tr class="clickable-row" data-resource-row data-modal-edit="true" data-href="{% url 'enseignant_modifier' e.pk %}" data-title="Modifier l'enseignant" data-subtitle="{{ e.nom }} {{ e.prenom }}" data-field-nom="{{ e.nom }}" data-field-prenom="{{ e.prenom }}" data-field-email="{{ e.email }}" data-field-is_active="{% if e.is_active %}1{% else %}0{% endif %}" tabindex="0" role="link" aria-label="Modifier l'enseignant {{ e.nom }} {{ e.prenom }}">
+        {% for e in etudiants %}
+        <tr class="clickable-row" data-resource-row data-modal-edit="true" data-href="{% url 'etudiant_modifier' e.pk %}" data-title="Modifier l'étudiant" data-subtitle="{{ e.nom }} {{ e.prenom }}" data-field-nom="{{ e.nom }}" data-field-prenom="{{ e.prenom }}" data-field-email="{{ e.email }}" data-field-option="{{ e.option_id|default:'' }}" data-field-is_active="{% if e.is_active %}1{% else %}0{% endif %}" tabindex="0" role="link" aria-label="Modifier l'étudiant {{ e.nom }} {{ e.prenom }}">
           <td class="td-bold">{{ e.nom }} {{ e.prenom }}</td>
           <td><span class="badge badge-gray">{{ e.username }}</span></td>
           <td class="td-muted">{{ e.email }}</td>
           <td>
-            <form class="status-toggle-form" method="post" action="{% url 'enseignant_basculer_statut' e.pk %}" data-row-ignore>
+            {% if e.option %}
+              <span class="badge badge-blue">{{ e.option.nom }}</span>
+            {% else %}
+              <span class="badge badge-gray">Non renseignée</span>
+            {% endif %}
+          </td>
+          <td>
+            <form class="status-toggle-form" method="post" action="{% url 'etudiant_basculer_statut' e.pk %}" data-row-ignore>
               {% csrf_token %}
               <input type="hidden" name="next" value="{{ request.get_full_path }}">
               <button
                 type="submit"
                 class="status-switch {% if e.is_active %}is-active{% endif %}"
-                title="{% if e.is_active %}Désactiver cet enseignant{% else %}Activer cet enseignant{% endif %}"
+                title="{% if e.is_active %}Désactiver cet étudiant{% else %}Activer cet étudiant{% endif %}"
                 aria-label="{% if e.is_active %}Désactiver {{ e.nom }} {{ e.prenom }}{% else %}Activer {{ e.nom }} {{ e.prenom }}{% endif %}"
               >
                 <span class="status-switch-track" aria-hidden="true">
@@ -81,7 +89,7 @@
           </td>
           <td>
             <div class="td-actions td-actions-icon">
-              <a href="{% url 'enseignant_supprimer' e.pk %}" class="icon-action icon-action-danger" data-resource-delete data-delete-url="{% url 'enseignant_supprimer' e.pk %}" data-confirm-text="Supprimer l'enseignant {{ e.nom }} {{ e.prenom }} ?" title="Supprimer" aria-label="Supprimer l'enseignant {{ e.nom }} {{ e.prenom }}">
+              <a href="{% url 'etudiant_supprimer' e.pk %}" class="icon-action icon-action-danger" data-resource-delete data-delete-url="{% url 'etudiant_supprimer' e.pk %}" data-confirm-text="Supprimer l'étudiant {{ e.nom }} {{ e.prenom }} ?" title="Supprimer" aria-label="Supprimer l'étudiant {{ e.nom }} {{ e.prenom }}">
                 <i class="ti ti-trash" aria-hidden="true"></i>
               </a>
             </div>
@@ -94,11 +102,11 @@
   {% include "emploi_du_temps/includes/pagination.html" %}
   {% else %}
   <div class="empty-state">
-    <div class="empty-ico"><i class="ti ti-users"></i></div>
-    <h3 class="empty-title">Aucun enseignant</h3>
-    <p class="empty-text">Commencez par ajouter les enseignants du département.</p>
-    <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'enseignant_creer' %}" data-title="Nouvel enseignant" data-subtitle="Créez le compte enseignant">
-      <i class="ti ti-plus"></i> Ajouter un enseignant
+    <div class="empty-ico"><i class="ti ti-school"></i></div>
+    <h3 class="empty-title">Aucun étudiant</h3>
+    <p class="empty-text">Commencez par ajouter les étudiants du département.</p>
+    <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'etudiant_creer' %}" data-title="Nouvel étudiant" data-subtitle="Créez le compte étudiant">
+      <i class="ti ti-plus"></i> Ajouter un étudiant
     </button>
   </div>
   {% endif %}
@@ -109,12 +117,12 @@
   <div class="resource-modal-panel" role="dialog" aria-modal="true" aria-labelledby="resourceFormTitle">
     <div class="resource-modal-head">
       <div>
-        <h2 id="resourceFormTitle">Nouvel enseignant</h2>
-        <p id="resourceFormSubtitle">Renseignez les informations de l'enseignant</p>
+        <h2 id="resourceFormTitle">Nouvel étudiant</h2>
+        <p id="resourceFormSubtitle">Renseignez les informations de l'étudiant</p>
       </div>
       <button type="button" class="resource-modal-close" data-resource-modal-close aria-label="Fermer"><i class="ti ti-x"></i></button>
     </div>
-    <form id="resourceForm" class="resource-modal-body" method="post" action="{% url 'enseignant_creer' %}">
+    <form id="resourceForm" class="resource-modal-body" method="post" action="{% url 'etudiant_creer' %}">
       {% csrf_token %}
       <div class="form-row">
         <div class="form-group">
@@ -126,9 +134,20 @@
           <input class="form-control" type="text" id="modalPrenom" name="prenom">
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label" for="modalEmail">Adresse email <span class="form-required">*</span></label>
-        <input class="form-control" type="email" id="modalEmail" name="email" required>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="modalEmail">Adresse email <span class="form-required">*</span></label>
+          <input class="form-control" type="email" id="modalEmail" name="email" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="modalOption">Option <span class="form-required">*</span></label>
+          <select class="form-control" id="modalOption" name="option" required>
+            <option value="">-- Sélectionner une option --</option>
+            {% for option in options %}
+            <option value="{{ option.pk }}">{{ option.nom }} — Niveau {{ option.niveau }}</option>
+            {% endfor %}
+          </select>
+        </div>
       </div>
       <div class="form-row" data-create-only>
         <div class="form-group">
@@ -165,7 +184,7 @@
     <div class="resource-modal-head">
       <div>
         <h2 id="resourceConfirmTitle">Confirmer la suppression</h2>
-        <p>Cette action peut être bloquée si l'enseignant est lié à des créneaux.</p>
+        <p>Cette action peut être bloquée si l'étudiant est lié à des créneaux.</p>
       </div>
       <button type="button" class="resource-modal-close" data-resource-modal-close aria-label="Fermer"><i class="ti ti-x"></i></button>
     </div>

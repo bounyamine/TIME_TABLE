@@ -10,15 +10,15 @@
       <p class="page-sub">Gérez les filières du département</p>
     </div>
   </div>
-  <a href="{% url 'option_creer' %}" class="btn btn-success">
+  <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'option_creer' %}" data-title="Nouvelle option" data-subtitle="Ajoutez une filière et son niveau">
     <i class="ti ti-plus"></i> Nouvelle option
-  </a>
+  </button>
 </div>
 
 <div class="card">
   <div class="card-head">
     <span class="card-head-title">Liste des options (filières)</span>
-    <span class="count-pill">{{ options.count }} au total</span>
+    <span class="count-pill">{{ page_obj.paginator.count }} au total</span>
   </div>
   {% if options %}
   <div class="table-wrap">
@@ -33,17 +33,14 @@
       </thead>
       <tbody>
         {% for o in options %}
-        <tr>
+        <tr class="clickable-row" data-resource-row data-modal-edit="true" data-href="{% url 'option_modifier' o.pk %}" data-title="Modifier l'option" data-subtitle="{{ o.nom }}" data-field-nom="{{ o.nom }}" data-field-niveau="{{ o.niveau }}" tabindex="0" role="link" aria-label="Modifier l'option {{ o.nom }}">
           <td class="td-bold">{{ o.nom }}</td>
           <td><span class="badge badge-blue">Niveau {{ o.niveau }}</span></td>
           <td><span class="badge badge-green"><span class="dot"></span>{{ o.cours.count }} cours</span></td>
           <td>
-            <div class="td-actions">
-              <a href="{% url 'option_modifier' o.pk %}" class="btn btn-outline btn-sm">
-                <i class="ti ti-pencil"></i> Modifier
-              </a>
-              <a href="{% url 'option_supprimer' o.pk %}" class="btn btn-danger-soft btn-sm">
-                <i class="ti ti-trash"></i> Supprimer
+            <div class="td-actions td-actions-icon">
+              <a href="{% url 'option_supprimer' o.pk %}" class="icon-action icon-action-danger" data-resource-delete data-delete-url="{% url 'option_supprimer' o.pk %}" data-confirm-text="Supprimer l'option {{ o.nom }} ?" title="Supprimer" aria-label="Supprimer l'option {{ o.nom }}">
+                <i class="ti ti-trash" aria-hidden="true"></i>
               </a>
             </div>
           </td>
@@ -52,15 +49,66 @@
       </tbody>
     </table>
   </div>
+  {% include "emploi_du_temps/includes/pagination.html" %}
   {% else %}
   <div class="empty-state">
     <div class="empty-ico"><i class="ti ti-award"></i></div>
     <h3 class="empty-title">Aucune option</h3>
     <p class="empty-text">Ajoutez les filières proposées par le département.</p>
-    <a href="{% url 'option_creer' %}" class="btn btn-success">
+    <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'option_creer' %}" data-title="Nouvelle option" data-subtitle="Ajoutez une filière et son niveau">
       <i class="ti ti-plus"></i> Ajouter une option
-    </a>
+    </button>
   </div>
   {% endif %}
+</div>
+
+<div class="resource-modal" id="resourceFormModal" aria-hidden="true">
+  <div class="resource-modal-backdrop" data-resource-modal-close></div>
+  <div class="resource-modal-panel" role="dialog" aria-modal="true" aria-labelledby="resourceFormTitle">
+    <div class="resource-modal-head">
+      <div>
+        <h2 id="resourceFormTitle">Nouvelle option</h2>
+        <p id="resourceFormSubtitle">Renseignez les informations de l'option</p>
+      </div>
+      <button type="button" class="resource-modal-close" data-resource-modal-close aria-label="Fermer"><i class="ti ti-x"></i></button>
+    </div>
+    <form id="resourceForm" class="resource-modal-body" method="post" action="{% url 'option_creer' %}">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label" for="modalNom">Nom de l'option <span class="form-required">*</span></label>
+        <input class="form-control" type="text" id="modalNom" name="nom" placeholder="Ex : Informatique et Télécommunications" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="modalNiveau">Niveau <span class="form-required">*</span></label>
+        <input class="form-control" type="number" id="modalNiveau" name="niveau" min="1" max="5" placeholder="Ex : 1, 2, 3..." required>
+      </div>
+      <div class="resource-modal-actions">
+        <button type="button" class="btn btn-secondary" data-resource-modal-close>Annuler</button>
+        <button type="submit" class="btn btn-success"><i class="ti ti-device-floppy"></i> Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="resource-modal" id="resourceConfirmModal" aria-hidden="true">
+  <div class="resource-modal-backdrop" data-resource-modal-close></div>
+  <div class="resource-modal-panel is-confirm" role="dialog" aria-modal="true" aria-labelledby="resourceConfirmTitle">
+    <div class="resource-modal-head">
+      <div>
+        <h2 id="resourceConfirmTitle">Confirmer la suppression</h2>
+        <p>Cette action peut être bloquée si l'option est utilisée.</p>
+      </div>
+      <button type="button" class="resource-modal-close" data-resource-modal-close aria-label="Fermer"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="resource-confirm-body">
+      <div class="resource-confirm-icon"><i class="ti ti-trash"></i></div>
+      <p id="resourceConfirmText">Cet élément sera supprimé.</p>
+    </div>
+    <form id="resourceConfirmForm" method="post" class="resource-modal-actions resource-confirm-actions">
+      {% csrf_token %}
+      <button type="button" class="btn btn-secondary" data-resource-modal-close>Annuler</button>
+      <button type="submit" class="btn btn-danger-soft"><i class="ti ti-trash"></i> Supprimer</button>
+    </form>
+  </div>
 </div>
 {% endblock %}

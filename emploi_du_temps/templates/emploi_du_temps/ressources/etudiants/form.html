@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block titre %}{{ action }} enseignant — EDT ENSPM{% endblock %}
+{% block titre %}{{ action }} étudiant — EDT ENSPM{% endblock %}
 {% block contenu %}
 
 <div class="page-header">
@@ -8,21 +8,21 @@
       <i class="ti {% if action == 'Créer' %}ti-user-plus{% else %}ti-user-edit{% endif %}"></i>
     </div>
     <div>
-      <h1 class="page-title">{{ action }} un enseignant</h1>
+      <h1 class="page-title">{{ action }} un étudiant</h1>
       <p class="page-sub">
-        {% if action == "Créer" %}Remplissez les informations du nouvel enseignant
-        {% else %}Modifiez les informations de l'enseignant{% endif %}
+        {% if action == "Créer" %}Renseignez les informations du nouvel étudiant
+        {% else %}Modifiez les informations de l'étudiant{% endif %}
       </p>
     </div>
   </div>
-  <a href="{% url 'enseignant_liste' %}" class="btn btn-secondary">
+  <a href="{% url 'etudiant_liste' %}" class="btn btn-secondary">
     <i class="ti ti-arrow-left"></i> Retour
   </a>
 </div>
 
 <div class="form-card">
   <div class="form-card-head">
-    <h2>Informations personnelles</h2>
+    <h2>Informations de l'étudiant</h2>
     <p>Les champs marqués <span style="color:var(--red)">*</span> sont obligatoires</p>
   </div>
   <div class="form-card-body">
@@ -43,7 +43,7 @@
           </label>
           <input class="form-control" type="text" id="nom" name="nom"
                  value="{{ form.nom.value|default:'' }}"
-                 placeholder="Ex : Nouga" required/>
+                 placeholder="Ex : Mbarga" required/>
           {% if form.nom.errors %}<div class="field-errors">{{ form.nom.errors }}</div>{% endif %}
         </div>
         <div class="form-group">
@@ -53,20 +53,37 @@
           </label>
           <input class="form-control" type="text" id="prenom" name="prenom"
                  value="{{ form.prenom.value|default:'' }}"
-                 placeholder="Ex : Ange"/>
+                 placeholder="Ex : Alice"/>
           {% if form.prenom.errors %}<div class="field-errors">{{ form.prenom.errors }}</div>{% endif %}
         </div>
       </div>
 
-      <div class="form-group">
-        <label class="form-label" for="email">
-          <i class="ti ti-mail" style="color:var(--blue)"></i>
-          Adresse email <span class="form-required">*</span>
-        </label>
-        <input class="form-control" type="email" id="email" name="email"
-               value="{{ form.email.value|default:'' }}"
-               placeholder="Ex : exemple@exemple.com" required/>
-        {% if form.email.errors %}<div class="field-errors">{{ form.email.errors }}</div>{% endif %}
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="email">
+            <i class="ti ti-mail" style="color:var(--blue)"></i>
+            Adresse email <span class="form-required">*</span>
+          </label>
+          <input class="form-control" type="email" id="email" name="email"
+                 value="{{ form.email.value|default:'' }}"
+                 placeholder="Ex : exemple@exemple.com" required/>
+          {% if form.email.errors %}<div class="field-errors">{{ form.email.errors }}</div>{% endif %}
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="option">
+            <i class="ti ti-award" style="color:var(--blue)"></i>
+            Option <span class="form-required">*</span>
+          </label>
+          <select class="form-control" id="option" name="option" required>
+            <option value="">-- Sélectionner une option --</option>
+            {% for option in form.option.field.queryset %}
+            <option value="{{ option.pk }}" {% if form.option.value|stringformat:"s" == option.pk|stringformat:"s" %}selected{% endif %}>
+              {{ option.nom }} — Niveau {{ option.niveau }}
+            </option>
+            {% endfor %}
+          </select>
+          {% if form.option.errors %}<div class="field-errors">{{ form.option.errors }}</div>{% endif %}
+        </div>
       </div>
 
       {% if action == "Créer" %}
@@ -78,8 +95,7 @@
           </label>
           <input class="form-control" type="text" id="username" name="username"
                  value="{{ form.username.value|default:'' }}"
-                 placeholder="Ex : nouga.o" required/>
-          <p class="form-hint">Utilisé pour la connexion</p>
+                 placeholder="Ex : mbarga.a" required/>
           {% if form.username.errors %}<div class="field-errors">{{ form.username.errors }}</div>{% endif %}
         </div>
         <div class="form-group">
@@ -110,9 +126,9 @@
       <div class="form-actions">
         <button type="submit" class="btn btn-success">
           <i class="ti {% if action == 'Créer' %}ti-user-plus{% else %}ti-device-floppy{% endif %}"></i>
-          {% if action == "Créer" %}Créer l'enseignant{% else %}Enregistrer{% endif %}
+          {% if action == "Créer" %}Créer l'étudiant{% else %}Enregistrer{% endif %}
         </button>
-        <a href="{% url 'enseignant_liste' %}" class="btn btn-secondary">Annuler</a>
+        <a href="{% url 'etudiant_liste' %}" class="btn btn-secondary">Annuler</a>
       </div>
     </form>
   </div>

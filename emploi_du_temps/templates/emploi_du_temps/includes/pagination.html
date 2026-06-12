@@ -1,0 +1,28 @@
+{% if page_obj and page_obj.has_other_pages %}
+<div class="pagination-bar">
+  <div class="pagination-info">
+    Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }} — {{ page_obj.paginator.count }} élément{% if page_obj.paginator.count > 1 %}s{% endif %}
+  </div>
+  <div class="pagination-actions">
+    {% if page_obj.has_previous %}
+      <a class="btn btn-secondary btn-sm" href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ page_obj.previous_page_number }}">
+        <i class="ti ti-chevron-left"></i> Précédent
+      </a>
+    {% endif %}
+
+    {% for num in page_obj.paginator.page_range %}
+      {% if num == page_obj.number %}
+        <span class="pagination-current">{{ num }}</span>
+      {% elif num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+        <a class="pagination-page" href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ num }}">{{ num }}</a>
+      {% endif %}
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+      <a class="btn btn-secondary btn-sm" href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ page_obj.next_page_number }}">
+        Suivant <i class="ti ti-chevron-right"></i>
+      </a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

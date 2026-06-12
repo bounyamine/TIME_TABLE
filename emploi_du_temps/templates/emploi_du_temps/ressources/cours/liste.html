@@ -1,6 +1,30 @@
 {% extends "base.html" %}
 {% block titre %}Cours — EDT ENSPM{% endblock %}
 {% block contenu %}
+<style>
+.status-toggle-form{margin:0}
+.status-switch{
+  display:inline-flex;align-items:center;gap:9px;
+  min-width:104px;padding:4px 10px 4px 4px;border-radius:999px;
+  border:1px solid var(--gray-200);background:var(--gray-100);
+  color:var(--gray-500);font-family:'Inter',sans-serif;font-size:11.5px;
+  font-weight:700;cursor:pointer;transition:all .18s;
+}
+.status-switch:hover{border-color:var(--gray-400);box-shadow:var(--shadow-sm)}
+.status-switch.is-active{
+  background:var(--green-light);border-color:#A7F3D0;color:var(--green-dark);
+}
+.status-switch-track{
+  width:34px;height:18px;border-radius:999px;background:var(--gray-400);
+  display:flex;align-items:center;padding:2px;transition:background .18s;flex-shrink:0;
+}
+.status-switch.is-active .status-switch-track{background:var(--green)}
+.status-switch-knob{
+  width:14px;height:14px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 3px rgba(15,23,42,.2);transition:transform .18s;
+}
+.status-switch.is-active .status-switch-knob{transform:translateX(16px)}
+</style>
 
 <div class="page-header">
   <div class="page-header-left">
@@ -10,15 +34,15 @@
       <p class="page-sub">Gérez les cours du département</p>
     </div>
   </div>
-  <a href="{% url 'cours_creer' %}" class="btn btn-success">
+  <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'cours_creer' %}" data-title="Nouveau cours" data-subtitle="Rattachez le cours à une UE et une option">
     <i class="ti ti-plus"></i> Nouveau cours
-  </a>
+  </button>
 </div>
 
 <div class="card">
   <div class="card-head">
     <span class="card-head-title">Liste des cours</span>
-    <span class="count-pill">{{ cours.count }} au total</span>
+    <span class="count-pill">{{ page_obj.paginator.count }} au total</span>
   </div>
   {% if cours %}
   <div class="table-wrap">
@@ -26,28 +50,39 @@
       <thead>
         <tr>
           <th>Code</th>
-          <th>UE</th>
           <th>Intitulé du cours</th>
-          <th>Volume horaire</th>
           <th>Option</th>
+          <th>Statut</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for c in cours %}
-        <tr>
+        <tr class="clickable-row" data-resource-row data-modal-edit="true" data-href="{% url 'cours_modifier' c.pk %}" data-title="Modifier le cours" data-subtitle="{{ c.intitule }}" data-field-ue="{{ c.ue_id }}" data-field-codeCours="{{ c.codeCours }}" data-field-intitule="{{ c.intitule }}" data-field-volumeHoraire="{{ c.volumeHoraire }}" data-field-option="{{ c.option_id }}" tabindex="0" role="link" aria-label="Modifier le cours {{ c.intitule }}">
           <td><span class="badge badge-blue">{{ c.codeCours }}</span></td>
-          <td class="td-bold">{{ c.ue.intituleUE }}</td>
           <td>{{ c.intitule }}</td>
-          <td><span class="badge badge-orange"><span class="dot"></span>{{ c.volumeHoraire }}h</span></td>
           <td><span class="badge badge-green">{{ c.option.nom }}</span></td>
           <td>
-            <div class="td-actions">
-              <a href="{% url 'cours_modifier' c.pk %}" class="btn btn-outline btn-sm">
-                <i class="ti ti-pencil"></i> Modifier
-              </a>
-              <a href="{% url 'cours_supprimer' c.pk %}" class="btn btn-danger-soft btn-sm">
-                <i class="ti ti-trash"></i> Supprimer
+            <form class="status-toggle-form" method="post" action="{% url 'cours_basculer_statut' c.pk %}" data-row-ignore>
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button
+                type="submit"
+                class="status-switch {% if c.status %}is-active{% endif %}"
+                title="{% if c.status %}Désactiver ce cours{% else %}Activer ce cours{% endif %}"
+                aria-label="{% if c.status %}Désactiver {{ c.intitule }}{% else %}Activer {{ c.intitule }}{% endif %}"
+              >
+                <span class="status-switch-track" aria-hidden="true">
+                  <span class="status-switch-knob"></span>
+                </span>
+                <span>{% if c.status %}Actif{% else %}Inactif{% endif %}</span>
+              </button>
+            </form>
+          </td>
+          <td>
+            <div class="td-actions td-actions-icon">
+              <a href="{% url 'cours_supprimer' c.pk %}" class="icon-action icon-action-danger" data-resource-delete data-delete-url="{% url 'cours_supprimer' c.pk %}" data-confirm-text="Supprimer le cours {{ c.intitule }} ?" title="Supprimer" aria-label="Supprimer le cours {{ c.intitule }}">
+                <i class="ti ti-trash" aria-hidden="true"></i>
               </a>
             </div>
           </td>
@@ -56,15 +91,109 @@
       </tbody>
     </table>
   </div>
+  {% include "emploi_du_temps/includes/pagination.html" %}
   {% else %}
   <div class="empty-state">
     <div class="empty-ico"><i class="ti ti-book-2"></i></div>
     <h3 class="empty-title">Aucun cours</h3>
     <p class="empty-text">Ajoutez les cours dispensés dans le département.</p>
-    <a href="{% url 'cours_creer' %}" class="btn btn-success">
+    <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'cours_creer' %}" data-title="Nouveau cours" data-subtitle="Rattachez le cours à une UE et une option">
       <i class="ti ti-plus"></i> Ajouter un cours
-    </a>
+    </button>
   </div>
   {% endif %}
 </div>
+
+<div class="resource-modal" id="resourceFormModal" aria-hidden="true">
+  <div class="resource-modal-backdrop" data-resource-modal-close></div>
+  <div class="resource-modal-panel" role="dialog" aria-modal="true" aria-labelledby="resourceFormTitle">
+    <div class="resource-modal-head">
+      <div>
+        <h2 id="resourceFormTitle">Nouveau cours</h2>
+        <p id="resourceFormSubtitle">Renseignez les informations du cours</p>
+      </div>
+      <button type="button" class="resource-modal-close" data-resource-modal-close aria-label="Fermer"><i class="ti ti-x"></i></button>
+    </div>
+    <form id="resourceForm" class="resource-modal-body" method="post" action="{% url 'cours_creer' %}">
+      {% csrf_token %}
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="modalUe">UE <span class="form-required">*</span></label>
+          <select class="form-control" id="modalUe" name="ue" required>
+            <option value="">-- Sélectionner une UE --</option>
+            {% for u in ues %}
+            <option value="{{ u.codeUE }}" data-code="{{ u.codeUE }}">{{ u.codeUE }} — {{ u.intituleUE }} ({{ u.cours.count }}/2 cours)</option>
+            {% endfor %}
+          </select>
+          <p class="form-hint">Une UE peut contenir au maximum deux cours.</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="modalCodeCours">Code du cours</label>
+          <input class="form-control" type="text" id="modalCodeCours" name="codeCours" placeholder="Sélectionnez une UE" readonly>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="modalVolume">Volume horaire</label>
+          <input class="form-control" type="text" id="modalVolume" name="volumeHoraire" placeholder="CM:30h, TD:20h, TP:30h, TPE:10h">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="modalOption">Option <span class="form-required">*</span></label>
+          <select class="form-control" id="modalOption" name="option" required>
+            <option value="">-- Sélectionner une option --</option>
+            {% for o in options %}
+            <option value="{{ o.pk }}">{{ o.nom }} — Niveau {{ o.niveau }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="modalIntitule">Intitulé du cours <span class="form-required">*</span></label>
+        <input class="form-control" type="text" id="modalIntitule" name="intitule" placeholder="Ex : Développement d'applications mobiles" required>
+      </div>
+      <div class="resource-modal-actions">
+        <button type="button" class="btn btn-secondary" data-resource-modal-close>Annuler</button>
+        <button type="submit" class="btn btn-success"><i class="ti ti-device-floppy"></i> Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="resource-modal" id="resourceConfirmModal" aria-hidden="true">
+  <div class="resource-modal-backdrop" data-resource-modal-close></div>
+  <div class="resource-modal-panel is-confirm" role="dialog" aria-modal="true" aria-labelledby="resourceConfirmTitle">
+    <div class="resource-modal-head">
+      <div>
+        <h2 id="resourceConfirmTitle">Confirmer la suppression</h2>
+        <p>Cette action peut être bloquée si le cours est utilisé dans la grille.</p>
+      </div>
+      <button type="button" class="resource-modal-close" data-resource-modal-close aria-label="Fermer"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="resource-confirm-body">
+      <div class="resource-confirm-icon"><i class="ti ti-trash"></i></div>
+      <p id="resourceConfirmText">Cet élément sera supprimé.</p>
+    </div>
+    <form id="resourceConfirmForm" method="post" class="resource-modal-actions resource-confirm-actions">
+      {% csrf_token %}
+      <button type="button" class="btn btn-secondary" data-resource-modal-close>Annuler</button>
+      <button type="submit" class="btn btn-danger-soft"><i class="ti ti-trash"></i> Supprimer</button>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const ueSelect = document.getElementById('modalUe');
+  const codeInput = document.getElementById('modalCodeCours');
+  function syncCodeCours() {
+    const selected = ueSelect?.options[ueSelect.selectedIndex];
+    codeInput.value = selected?.dataset?.code || '';
+  }
+  ueSelect?.addEventListener('change', syncCodeCours);
+  document.querySelectorAll('[data-resource-create], [data-resource-row]').forEach(el => {
+    el.addEventListener('click', () => setTimeout(syncCodeCours, 0));
+    el.addEventListener('keydown', () => setTimeout(syncCodeCours, 0));
+  });
+});
+</script>
 {% endblock %}
