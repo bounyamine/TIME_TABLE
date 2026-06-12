@@ -40,6 +40,22 @@ def accueil(request: HttpRequest) -> HttpResponse:
     return render(request, "emploi_du_temps/accueil.html")
 
 
+def inscription_etudiant(request: HttpRequest) -> HttpResponse:
+    if request.user.is_authenticated:
+        return redirect("tableau_de_bord")
+
+    if request.method == "POST":
+        form = UtilisateurRoleCreationForm(request.POST, role=Utilisateur.Role.ETUDIANT)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Votre compte étudiant a été créé. Vous pouvez maintenant vous connecter.")
+            return redirect("login")
+    else:
+        form = UtilisateurRoleCreationForm(role=Utilisateur.Role.ETUDIANT)
+
+    return render(request, "registration/inscription_etudiant.html", {"form": form})
+
+
 @login_required
 def tableau_de_bord(request: HttpRequest) -> HttpResponse:
     utilisateur = request.user

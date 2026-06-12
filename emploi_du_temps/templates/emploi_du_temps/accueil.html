@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block titre %}Accueil — EDT ENSPM{% endblock %}
+{% block titre %}Accueil - EDT ENSPM{% endblock %}
 {% block body_class %}public-page{% endblock %}
 
 {% block contenu %}
@@ -13,108 +13,120 @@
     min-height: calc(100vh - 56px);
   }
 
-  .accueil-shell {
-    max-width: 860px;
+  .accueil-box {
     width: 100%;
-    margin: 40px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-
-  /* ── HERO ── */
-  .accueil-hero {
+    max-width: 460px;
+    margin: 32px 16px;
     background: #fff;
     border: 1px solid #D9E2FF;
     border-radius: 20px;
-    padding: 44px 52px;
+    overflow: hidden;
+  }
+
+  .accueil-top {
+    padding: 36px 36px 28px;
+    border-bottom: 1px solid #EEF2FF;
     text-align: center;
   }
 
-  .accueil-badge {
-    display: inline-flex; align-items: center; gap: 7px;
-    background: #EFF6FF; color: #2563EB;
-    border: 1px solid #BFDBFE; border-radius: 999px;
-    padding: 5px 16px; font-size: 12px; font-weight: 700;
-    margin-bottom: 22px;
-    text-transform: uppercase; letter-spacing: .6px;
+  .accueil-logo {
+    width: 56px;
+    height: 56px;
+    background: #2563EB;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 18px;
+  }
+  .accueil-logo i { color: #fff; font-size: 26px; }
+
+  .accueil-top h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0F172A;
+    margin: 0 0 6px;
+    letter-spacing: -.4px;
   }
 
-  .accueil-title {
-    font-size: 36px; font-weight: 800;
-    color: #0F172A; line-height: 1.1;
-    letter-spacing: -.8px; margin-bottom: 14px;
-  }
-  .accueil-title span { color: #2563EB; }
-
-  .accueil-subtitle {
-    font-size: 15px; color: #64748B;
-    line-height: 1.7; max-width: 480px;
-    margin: 0 auto 32px;
+  .accueil-top p {
+    font-size: 13.5px;
+    color: #64748B;
+    line-height: 1.6;
+    margin: 0;
   }
 
-  .accueil-actions {
-    display: flex; gap: 12px;
-    justify-content: center; flex-wrap: wrap;
+  .accueil-body {
+    padding: 28px 36px 32px;
+    display: grid;
+    gap: 12px;
   }
 
-  .btn-hero-primary {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 13px 28px;
-    background: #2563EB; color: #fff;
-    border-radius: 12px; border: none;
-    font-size: 14px; font-weight: 700;
-    text-decoration: none; cursor: pointer;
+  .btn-accueil-primary,
+  .btn-accueil-secondary {
+    width: 100%;
+    padding: 12px;
+    border-radius: 11px;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     transition: all .18s;
-    font-family: 'Inter', sans-serif;
-  }
-  .btn-hero-primary:hover {
-    background: #1D4ED8;
   }
 
-  .btn-hero-secondary {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 13px 28px;
-    background: #fff; color: #2563EB;
-    border-radius: 12px;
-    border: 2px solid #BFDBFE;
-    font-size: 14px; font-weight: 700;
-    text-decoration: none; cursor: pointer;
-    transition: all .18s;
-    font-family: 'Inter', sans-serif;
+  .btn-accueil-primary {
+    background: #2563EB;
+    color: #fff;
+    border: 1px solid #2563EB;
   }
-  .btn-hero-secondary:hover {
+  .btn-accueil-primary:hover { background: #1D4ED8; }
+
+  .btn-accueil-secondary {
+    background: #fff;
+    color: #2563EB;
+    border: 1.5px solid #BFDBFE;
+  }
+  .btn-accueil-secondary:hover {
     background: #EFF6FF;
     border-color: #2563EB;
-    transform: translateY(-1px);
   }
 
-  @media (max-width: 680px) {
-    .accueil-hero { padding: 32px 24px; }
-    .accueil-title { font-size: 26px; }
-    .accueil-shell { margin: 20px 12px; }
+  @media (max-width: 480px) {
+    .accueil-box {
+      margin: 0;
+      border-radius: 0;
+      border: none;
+      min-height: calc(100vh - 56px);
+    }
+    .accueil-top,
+    .accueil-body {
+      padding-left: 24px;
+      padding-right: 24px;
+    }
   }
 </style>
 
-<div class="accueil-shell">
-
-  <!-- HERO -->
-  <div class="accueil-hero">
-    <span class="accueil-badge">
+<div class="accueil-box">
+  <div class="accueil-top">
+    <div class="accueil-logo">
       <i class="ti ti-calendar-event" aria-hidden="true"></i>
-      Gestion des emplois du temps
-    </span>
-    <h1 class="accueil-title">EDT <span>ENSPM</span></h1>
-    <p class="accueil-subtitle">
-      Planification des cours de l'École Nationale Supérieure Polytechnique de Maroua.
-      Gérez créneaux, enseignants, salles et emplois du temps en un seul endroit.
-    </p>
-    <div class="accueil-actions">
-      <a href="{% url 'login' %}" class="btn-hero-primary">
-        <i class="ti ti-login" aria-hidden="true"></i>
-        Se connecter
-      </a>
     </div>
+    <h1>EDT ENSPM</h1>
+    <p>Connectez-vous pour accéder à votre espace.</p>
+  </div>
+
+  <div class="accueil-body">
+    <a href="{% url 'login' %}" class="btn-accueil-primary">
+      <i class="ti ti-login" aria-hidden="true"></i>
+      Se connecter
+    </a>
+    <a href="{% url 'inscription_etudiant' %}" class="btn-accueil-secondary">
+      <i class="ti ti-user-plus" aria-hidden="true"></i>
+      Créer un compte étudiant
+    </a>
   </div>
 </div>
 {% endblock %}

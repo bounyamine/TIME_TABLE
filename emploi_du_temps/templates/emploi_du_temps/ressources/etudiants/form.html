@@ -103,8 +103,13 @@
             <i class="ti ti-lock" style="color:var(--blue)"></i>
             Mot de passe <span class="form-required">*</span>
           </label>
-          <input class="form-control" type="password" id="password" name="password"
-                 placeholder="Minimum 8 caractères" required/>
+          <div class="password-field">
+            <input class="form-control" type="password" id="password" name="password"
+                   placeholder="Minimum 8 caractères" required/>
+            <button type="button" class="password-toggle" data-password-toggle="password" aria-label="Afficher le mot de passe" aria-pressed="false" title="Afficher le mot de passe">
+              <i class="ti ti-eye" aria-hidden="true"></i>
+            </button>
+          </div>
           {% if form.password.errors %}<div class="field-errors">{{ form.password.errors }}</div>{% endif %}
         </div>
       </div>

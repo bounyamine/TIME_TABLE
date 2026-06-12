@@ -5,6 +5,7 @@ urlpatterns = [
     # ── Auth ──────────────────────────────────────
     path("", views.accueil, name="accueil"),
     path("connexion/", views.ConnexionView.as_view(), name="login"),
+    path("inscription_etudiant/etudiant/", views.inscription_etudiant, name="inscription_etudiant"),
     path("deconnexion/", views.deconnexion, name="logout"),
     path("tableau-de-bord/", views.tableau_de_bord, name="tableau_de_bord"),
 
