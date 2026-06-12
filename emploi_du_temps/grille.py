@@ -1,5 +1,7 @@
 from datetime import date, time
 
+from django.db.models import Q
+
 from .models import Creneau, EmploiDuTemps
 
 JOURS_EDT = [
@@ -31,7 +33,7 @@ def construire_grille(emploi_du_temps: EmploiDuTemps) -> list[dict]:
     """Grille pour l'éditeur d'un EmploiDuTemps spécifique."""
     creneaux = Creneau.objects.filter(emploiDuTemps=emploi_du_temps).select_related(
         "cours__ue", "cours", "enseignant", "salle"
-    )
+    ).prefetch_related("options", "cours__options")
     creneaux_par_cellule = {
         (c.jour, c.heureDebut, c.heureFin): c for c in creneaux
     }
@@ -61,7 +63,9 @@ def construire_grille_semaine(
     """Grille hebdomadaire d'une salle donnée, filtrée selon le rôle utilisateur."""
     qs = Creneau.objects.filter(
         emploiDuTemps__semaine=semaine,
-    ).select_related("cours__ue", "cours", "enseignant", "salle", "option", "emploiDuTemps")
+    ).select_related(
+        "cours__ue", "cours", "enseignant", "salle", "option", "emploiDuTemps"
+    ).prefetch_related("options", "cours__options")
 
     if utilisateur and utilisateur.is_authenticated:
         if utilisateur.role == utilisateur.Role.ENSEIGNANT:
@@ -69,7 +73,9 @@ def construire_grille_semaine(
         elif utilisateur.role == utilisateur.Role.ETUDIANT:
             qs = qs.filter(emploiDuTemps__statut=EmploiDuTemps.Statut.PUBLIE)
             if utilisateur.option_id:
-                qs = qs.filter(option=utilisateur.option)
+                qs = qs.filter(
+                    Q(option=utilisateur.option) | Q(options=utilisateur.option)
+                ).distinct()
             else:
                 qs = qs.none()
         elif utilisateur.role != utilisateur.Role.CD:

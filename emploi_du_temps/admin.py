@@ -66,9 +66,10 @@ class UEAdmin(admin.ModelAdmin):
 
 @admin.register(Cours)
 class CoursAdmin(admin.ModelAdmin):
-    list_display = ("codeCours", "ue", "intitule", "volumeHoraire", "option", "status")
+    list_display = ("codeCours", "ue", "intitule", "volumeHoraire", "options_affichage", "status")
     search_fields = ("codeCours", "intitule", "ue__intituleUE")
-    list_filter = ("ue", "option", "status")
+    list_filter = ("ue", "options", "status")
+    filter_horizontal = ("options",)
 
 
 @admin.register(Salle)
@@ -88,6 +89,7 @@ class CreneauInline(admin.TabularInline):
         obj.option = obj.cours.option
         if commit:
             obj.save()
+            obj.options.set(obj.cours.options_effectives)
         return obj
 
     def save_existing(self, form, instance, commit=True):
@@ -95,6 +97,7 @@ class CreneauInline(admin.TabularInline):
         obj.option = obj.cours.option
         if commit:
             obj.save()
+            obj.options.set(obj.cours.options_effectives)
         return obj
 
 
@@ -114,10 +117,11 @@ class CreneauAdmin(admin.ModelAdmin):
         "cours",
         "enseignant",
         "salle",
-        "option",
+        "options_affichage",
     )
-    list_filter = ("jour", "salle", "option", "enseignant")
+    list_filter = ("jour", "salle", "options", "enseignant")
     search_fields = ("cours__codeCours", "cours__intitule", "salle__nom")
+    filter_horizontal = ("options",)
 
 
 @admin.register(Conflit)

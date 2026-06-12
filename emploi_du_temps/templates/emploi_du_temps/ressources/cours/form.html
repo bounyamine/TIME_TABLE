@@ -10,7 +10,7 @@
     <div>
       <h1 class="page-title">{{ action }} un cours</h1>
       <p class="page-sub">
-        {% if action == "Créer" %}Rattachez le nouveau cours à une UE
+        {% if action == "Créer" %}Rattachez le nouveau cours à une UE et une ou plusieurs options
         {% else %}Modifiez les informations du cours{% endif %}
       </p>
     </div>
@@ -69,19 +69,19 @@
                  placeholder="CM:30h, TD:20h, TP:30h, TPE:10h"/>
         </div>
         <div class="form-group">
-          <label class="form-label" for="option">
+          <label class="form-label" for="options">
             <i class="ti ti-award" style="color:var(--blue)"></i>
-            Option (filière) <span class="form-required">*</span>
+            Options (filières) <span class="form-required">*</span>
           </label>
-          <select class="form-control" id="option" name="option" required>
-            <option value="">-- Sélectionner une option --</option>
+          <select class="form-control" id="options" name="options" multiple required>
             {% for o in options %}
             <option value="{{ o.pk }}"
-              {% if cours and cours.option_id == o.pk %}selected{% endif %}>
+              {% if cours and o in cours.options_effectives %}selected{% endif %}>
               {{ o.nom }} — Niveau {{ o.niveau }}
             </option>
             {% endfor %}
           </select>
+          <p class="form-hint">Maintenez Ctrl ou Cmd pour sélectionner plusieurs options.</p>
         </div>
         <div class="form-group">
           <label class="form-label" for="intitule">

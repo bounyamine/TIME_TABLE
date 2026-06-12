@@ -861,6 +861,11 @@ document.addEventListener('DOMContentLoaded', function () {
       if (value !== null) {
         if (field.type === 'checkbox') {
           field.checked = value === '1' || value === 'true' || value === 'True';
+        } else if (field.multiple) {
+          const values = value.split(',').map(item => item.trim()).filter(Boolean);
+          Array.from(field.options).forEach(option => {
+            option.selected = values.includes(option.value);
+          });
         } else {
           field.value = value;
         }

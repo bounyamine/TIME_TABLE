@@ -34,7 +34,7 @@
       <p class="page-sub">Gérez les cours du département</p>
     </div>
   </div>
-  <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'cours_creer' %}" data-title="Nouveau cours" data-subtitle="Rattachez le cours à une UE et une option">
+  <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'cours_creer' %}" data-title="Nouveau cours" data-subtitle="Rattachez le cours à une UE et une ou plusieurs options">
     <i class="ti ti-plus"></i> Nouveau cours
   </button>
 </div>
@@ -51,17 +51,17 @@
         <tr>
           <th>Code</th>
           <th>Intitulé du cours</th>
-          <th>Option</th>
+          <th>Options</th>
           <th>Statut</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for c in cours %}
-        <tr class="clickable-row" data-resource-row data-modal-edit="true" data-href="{% url 'cours_modifier' c.pk %}" data-title="Modifier le cours" data-subtitle="{{ c.intitule }}" data-field-ue="{{ c.ue_id }}" data-field-codeCours="{{ c.codeCours }}" data-field-intitule="{{ c.intitule }}" data-field-volumeHoraire="{{ c.volumeHoraire }}" data-field-option="{{ c.option_id }}" tabindex="0" role="link" aria-label="Modifier le cours {{ c.intitule }}">
+        <tr class="clickable-row" data-resource-row data-modal-edit="true" data-href="{% url 'cours_modifier' c.pk %}" data-title="Modifier le cours" data-subtitle="{{ c.intitule }}" data-field-ue="{{ c.ue_id }}" data-field-codeCours="{{ c.codeCours }}" data-field-intitule="{{ c.intitule }}" data-field-volumeHoraire="{{ c.volumeHoraire }}" data-field-options="{{ c.option_ids_csv }}" tabindex="0" role="link" aria-label="Modifier le cours {{ c.intitule }}">
           <td><span class="badge badge-blue">{{ c.codeCours }}</span></td>
           <td>{{ c.intitule }}</td>
-          <td><span class="badge badge-green">{{ c.option.nom }}</span></td>
+          <td><span class="badge badge-green">{{ c.options_affichage }}</span></td>
           <td>
             <form class="status-toggle-form" method="post" action="{% url 'cours_basculer_statut' c.pk %}" data-row-ignore>
               {% csrf_token %}
@@ -97,7 +97,7 @@
     <div class="empty-ico"><i class="ti ti-book-2"></i></div>
     <h3 class="empty-title">Aucun cours</h3>
     <p class="empty-text">Ajoutez les cours dispensés dans le département.</p>
-    <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'cours_creer' %}" data-title="Nouveau cours" data-subtitle="Rattachez le cours à une UE et une option">
+    <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'cours_creer' %}" data-title="Nouveau cours" data-subtitle="Rattachez le cours à une UE et une ou plusieurs options">
       <i class="ti ti-plus"></i> Ajouter un cours
     </button>
   </div>
@@ -138,13 +138,13 @@
           <input class="form-control" type="text" id="modalVolume" name="volumeHoraire" placeholder="CM:30h, TD:20h, TP:30h, TPE:10h">
         </div>
         <div class="form-group">
-          <label class="form-label" for="modalOption">Option <span class="form-required">*</span></label>
-          <select class="form-control" id="modalOption" name="option" required>
-            <option value="">-- Sélectionner une option --</option>
+          <label class="form-label" for="modalOptions">Options <span class="form-required">*</span></label>
+          <select class="form-control" id="modalOptions" name="options" multiple required>
             {% for o in options %}
             <option value="{{ o.pk }}">{{ o.nom }} — Niveau {{ o.niveau }}</option>
             {% endfor %}
           </select>
+          <p class="form-hint">Maintenez Ctrl ou Cmd pour choisir plusieurs options.</p>
         </div>
       </div>
       <div class="form-group">

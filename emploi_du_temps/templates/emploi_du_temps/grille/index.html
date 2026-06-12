@@ -184,6 +184,7 @@
                data-cours-id="{{ cr.cours_id }}"
                data-enseignant-id="{{ cr.enseignant_id }}"
                data-salle-id="{{ cr.salle_id }}"
+               data-options-ids="{% for option in cr.options.all %}{{ option.pk }}{% if not forloop.last %},{% endif %}{% empty %}{{ cr.option_id }}{% endfor %}"
                data-jour="{{ cellule.jour }}"
                data-plage="{{ cellule.plage.id }}"
                data-edit-url="{% url 'modifier_creneau_grille' cr.pk %}"
@@ -193,7 +194,7 @@
                {% endif %}>
             <div class="edt-card-body">
               <div class="edt-cours-nom">{{ cr.cours.intitule }}</div>
-              <div class="edt-code-badge-line">{{ cr.cours.codeCours }}</div>
+              <div class="edt-code-badge-line">{{ cr.reference_affichage }}</div>
               {% if cr.cours.volumeHoraire %}
               <div class="edt-volume">({{ cr.cours.volumeHoraire }})</div>
               {% endif %}
@@ -250,7 +251,7 @@
           <label class="form-label" for="quickCours">Cours</label>
           <select class="form-control" id="quickCours" name="cours" required>
             {% for cours in cours_modal %}
-            <option value="{{ cours.pk }}">{{ cours.codeCours }} — {{ cours.intitule }} ({{ cours.option.nom }})</option>
+            <option value="{{ cours.pk }}">{{ cours.codeCours }} — {{ cours.intitule }} ({{ cours.options_affichage }})</option>
             {% endfor %}
           </select>
         </div>
@@ -683,6 +684,7 @@ document.head.appendChild(style);
       cours_id: card?.dataset.coursId || '',
       enseignant_id: card?.dataset.enseignantId || '',
       salle_id: card?.dataset.salleId || '',
+      options_ids: card?.dataset.optionsIds || '',
       jour: card?.dataset.jour || '',
       plage: card?.dataset.plage || ''
     };

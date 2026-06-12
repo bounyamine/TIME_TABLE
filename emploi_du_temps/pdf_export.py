@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 
 from django.conf import settings
 from django.template.loader import render_to_string
@@ -42,10 +42,24 @@ def generer_pdf_emplois_du_temps(semaine: date) -> ExportPlanning:
     if not os.path.isfile(logo_path):
         logo_path = None
 
+    fin_semaine = semaine + timedelta(days=5)
+    mois = [
+        "",
+        "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+        "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
+    ]
+    periode_label = (
+        f"période du {semaine.day:02d} au {fin_semaine.day:02d} "
+        f"{mois[fin_semaine.month]} {fin_semaine.year}"
+    )
+
     html_str = render_to_string(
         "emploi_du_temps/grille/imprimer_global.html",
         {
             "semaine": semaine,
+            "annee_debut": semaine.year - 1,
+            "annee_fin": semaine.year,
+            "periode_label": periode_label,
             "salles_lignes": salles_lignes,
             "jours": JOURS_EDT,
             "logo_path": logo_path,
