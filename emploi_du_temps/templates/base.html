@@ -6,6 +6,15 @@
 <title>{% block titre %}Gestion EDT — ENSPM{% endblock %}</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+<script>
+(function () {
+  try {
+    if (localStorage.getItem('edtSidebarCollapsed') === '1') {
+      document.documentElement.classList.add('sidebar-collapsed');
+    }
+  } catch (e) {}
+})();
+</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -26,7 +35,7 @@ body{
   font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
   background:var(--gray-50);color:var(--gray-900);
   min-height:100vh;display:flex;flex-direction:column;
-  -webkit-font-smoothing:antialiased;font-size:14px;
+  -webkit-font-smoothing:antialiased;font-size:14px;overflow-x:hidden;
 }
 
 /* ── NAVBAR ── */
@@ -50,6 +59,14 @@ body{
   border:1px solid var(--blue-mid);
 }
 .navbar-right{display:flex;align-items:center;gap:10px}
+.sidebar-toggle{
+  width:32px;height:32px;border-radius:9px;border:1px solid var(--gray-200);
+  background:var(--white);color:var(--gray-500);display:inline-flex;
+  align-items:center;justify-content:center;cursor:pointer;transition:all .18s;
+  flex-shrink:0;
+}
+.sidebar-toggle:hover{background:var(--blue-light);color:var(--blue);border-color:var(--blue-mid)}
+.sidebar-toggle i{font-size:18px}
 .user-pill{
   display:flex;align-items:center;gap:8px;
   background:var(--gray-50);border:1px solid var(--gray-200);
@@ -80,7 +97,13 @@ body{
 .sidebar{
   width:220px;background:var(--white);border-right:1px solid var(--gray-200);
   padding:16px 12px;display:flex;flex-direction:column;gap:2px;flex-shrink:0;
+  transition:width .18s ease,padding .18s ease;
 }
+.sidebar-head{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:0 4px 8px 10px;
+}
+.sidebar-head .nav-section{padding:0}
 .nav-section{
   font-size:10px;font-weight:700;text-transform:uppercase;
   letter-spacing:1.2px;color:var(--gray-400);padding:14px 10px 6px;
@@ -98,9 +121,30 @@ body{
   content:'';position:absolute;left:0;top:22%;bottom:22%;
   width:3px;background:var(--blue);border-radius:0 3px 3px 0;
 }
+html.sidebar-collapsed .sidebar{width:72px;padding:14px 8px}
+html.sidebar-collapsed .sidebar .nav-section{display:none}
+html.sidebar-collapsed .sidebar .sidebar-head{justify-content:center;padding:0 0 8px}
+html.sidebar-collapsed .sidebar .nav-link{justify-content:center;padding:10px;font-size:0;gap:0}
+html.sidebar-collapsed .sidebar .nav-link i{font-size:19px;width:auto}
+html.sidebar-collapsed .sidebar .nav-link.active::before{top:18%;bottom:18%}
+.mobile-nav{display:none}
+.mobile-nav-scroll{
+  display:flex;gap:8px;overflow-x:auto;padding:10px 14px;
+  background:var(--white);border-bottom:1px solid var(--gray-200);
+  scrollbar-width:none;
+}
+.mobile-nav-scroll::-webkit-scrollbar{display:none}
+.mobile-nav-link{
+  display:inline-flex;align-items:center;gap:7px;flex:0 0 auto;
+  color:var(--gray-500);background:var(--gray-50);border:1px solid var(--gray-200);
+  border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700;
+  text-decoration:none;white-space:nowrap;
+}
+.mobile-nav-link i{font-size:15px}
+.mobile-nav-link.active{background:var(--blue-light);color:var(--blue);border-color:var(--blue-mid)}
 
 /* ── MAIN ── */
-.main-content{flex:1;padding:28px 32px;overflow-y:auto}
+.main-content{flex:1;min-width:0;padding:28px 32px;overflow-y:auto}
 
 /* ── STATS ── */
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
@@ -180,7 +224,7 @@ tbody tr:hover{background:var(--blue-light)}
 tbody td{padding:13px 18px;color:var(--gray-700);vertical-align:middle}
 .td-bold{font-weight:600;color:var(--gray-900)}
 .td-muted{color:var(--gray-500)}
-.td-actions{display:flex;gap:8px;align-items:center}
+.td-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 
 /* ── PAGINATION ── */
 .pagination-bar{
@@ -211,7 +255,7 @@ tbody td{padding:13px 18px;color:var(--gray-700);vertical-align:middle}
 .badge-orange .dot{background:var(--orange)}
 
 /* ── FORM ── */
-.form-card{background:var(--white);border-radius:var(--r);border:1px solid var(--gray-200);box-shadow:var(--shadow-sm);max-width:620px}
+.form-card{background:var(--white);border-radius:var(--r);border:1px solid var(--gray-200);box-shadow:var(--shadow-sm);max-width:620px;width:100%}
 .form-card-head{
   padding:20px 28px;border-bottom:1px solid var(--gray-100);
   background:linear-gradient(to right,var(--blue-light),var(--white));
@@ -237,7 +281,7 @@ tbody td{padding:13px 18px;color:var(--gray-700);vertical-align:middle}
 .form-control::placeholder{color:var(--gray-400)}
 .form-hint{font-size:11.5px;color:var(--gray-500);margin-top:5px}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.form-actions{display:flex;gap:10px;margin-top:28px;padding-top:22px;border-top:1px solid var(--gray-100)}
+.form-actions{display:flex;gap:10px;margin-top:28px;padding-top:22px;border-top:1px solid var(--gray-100);flex-wrap:wrap}
 
 /* ── TOASTS / FLASH MESSAGES ── */
 .alerts-wrap{
@@ -352,6 +396,7 @@ tbody td{padding:13px 18px;color:var(--gray-700);vertical-align:middle}
   width:56px;height:56px;border-radius:50%;
   background:var(--red-light);border:2px solid #FECACA;
   display:flex;align-items:center;justify-content:center;margin:0 auto 16px;
+}
 .confirm-ico-wrap i{font-size:26px;color:var(--red)}
 .confirm-title{font-size:17px;font-weight:700;color:var(--gray-900);margin-bottom:8px}
 .confirm-text{font-size:13.5px;color:var(--gray-500);line-height:1.6}
@@ -391,9 +436,11 @@ tbody td{padding:13px 18px;color:var(--gray-700);vertical-align:middle}
 .readonly-card{background:var(--white);border:1px solid var(--gray-200);border-radius:var(--r);padding:16px;box-shadow:var(--shadow-sm)}
 .readonly-card span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--gray-400);font-weight:700;margin-bottom:6px}
 .readonly-card strong{font-size:14px;color:var(--gray-900)}
+.dashboard-links-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 
 /* ── TIMETABLE OFFICIEL ── */
 .official-page .sidebar{display:none}
+.official-page .mobile-nav{display:none!important}
 .official-page .main-content{background:#fff;padding:18px 24px;overflow:auto}
 .official-actions{
   display:flex;justify-content:space-between;align-items:center;gap:16px;
@@ -463,14 +510,46 @@ tbody td{padding:13px 18px;color:var(--gray-700);vertical-align:middle}
   .stats-grid,.readonly-grid{grid-template-columns:repeat(2,1fr)}
   .hero-card,.login-shell{grid-template-columns:1fr}
   .main-content{padding:20px 16px}
+  .sidebar{width:72px;padding:14px 8px}
+  .sidebar .nav-section{display:none}
+  .sidebar .nav-link{justify-content:center;padding:10px;font-size:0;gap:0}
+  .sidebar .nav-link i{font-size:19px;width:auto}
+  .sidebar .nav-link.active::before{top:18%;bottom:18%}
+  .dashboard-links-grid{grid-template-columns:1fr}
 }
 @media(max-width:640px){
+  .navbar{height:auto;min-height:56px;padding:8px 12px;gap:10px}
+  .brand-badge,.user-pill>div:not(.avatar){display:none}
+  .navbar-right{gap:8px}
+  .btn-logout{width:36px;height:36px;justify-content:center;padding:0;border-radius:50%}
+  .btn-logout{font-size:0;gap:0}
+  .btn-logout i{font-size:17px}
+  .app-layout{display:block;min-height:0}
   .sidebar{display:none}
+  .mobile-nav{display:block;position:sticky;top:56px;z-index:180}
+  .stats-grid{grid-template-columns:1fr}
   .form-row,.readonly-grid{grid-template-columns:1fr}
+  .form-card-head,.form-card-body{padding:20px}
+  .form-actions .btn{flex:1 1 auto;justify-content:center}
   .page-header{flex-direction:column;gap:14px;align-items:flex-start}
+  .page-header>.btn,.page-header>a.btn{width:100%;justify-content:center}
+  .page-header-left{align-items:flex-start}
+  .page-icon{width:40px;height:40px;border-radius:11px}
+  .page-title{font-size:18px}
+  .table-wrap{margin:0 -1px}
+  .td-actions{min-width:160px}
+  .pagination-bar{align-items:flex-start}
+  .pagination-actions{width:100%}
   .hero-copy,.login-form-panel,.login-visual{padding:28px}
   .login-visual{min-height:auto}
   .hero-title{font-size:26px}
+}
+@media(max-width:420px){
+  .main-content{padding:16px 12px}
+  .card-head{padding:12px 14px}
+  tbody td,thead th{padding:11px 12px}
+  .form-actions{flex-direction:column}
+  .form-actions .btn{width:100%}
 }
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -481,6 +560,30 @@ tbody td{padding:13px 18px;color:var(--gray-700);vertical-align:middle}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   const toasts = document.querySelectorAll('[data-toast]');
+  const sidebarToggle = document.getElementById('sidebarToggle');
+
+  if (sidebarToggle) {
+    const icon = sidebarToggle.querySelector('i');
+    const syncSidebarToggle = function () {
+      const collapsed = document.documentElement.classList.contains('sidebar-collapsed');
+      sidebarToggle.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
+      sidebarToggle.setAttribute('aria-label', collapsed ? 'Agrandir le menu' : 'Réduire le menu');
+      sidebarToggle.setAttribute('title', collapsed ? 'Agrandir le menu' : 'Réduire le menu');
+      if (icon) {
+        icon.className = collapsed ? 'ti ti-layout-sidebar-left-expand' : 'ti ti-layout-sidebar-left-collapse';
+      }
+    };
+
+    sidebarToggle.addEventListener('click', function () {
+      const collapsed = document.documentElement.classList.toggle('sidebar-collapsed');
+      try {
+        localStorage.setItem('edtSidebarCollapsed', collapsed ? '1' : '0');
+      } catch (e) {}
+      syncSidebarToggle();
+    });
+
+    syncSidebarToggle();
+  }
 
   toasts.forEach(function (toast) {
     const closeBtn = toast.querySelector('.toast-close');
@@ -524,10 +627,48 @@ document.addEventListener('DOMContentLoaded', function () {
   {% endif %}
 </nav>
 
+{% if user.is_authenticated %}
+<nav class="mobile-nav" aria-label="Navigation mobile">
+  <div class="mobile-nav-scroll">
+    <a href="{% url 'tableau_de_bord' %}" class="mobile-nav-link {% if request.resolver_match.url_name == 'tableau_de_bord' %}active{% endif %}">
+      <i class="ti ti-layout-dashboard" aria-hidden="true"></i> Tableau
+    </a>
+    {% if user.role == "CD" %}
+    <a href="{% url 'enseignant_liste' %}" class="mobile-nav-link {% if 'enseignant' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="ti ti-users" aria-hidden="true"></i> Enseignants
+    </a>
+    <a href="{% url 'etudiant_liste' %}" class="mobile-nav-link {% if 'etudiant' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="ti ti-school" aria-hidden="true"></i> Étudiants
+    </a>
+    <a href="{% url 'ue_liste' %}" class="mobile-nav-link {% if 'ue' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="ti ti-components" aria-hidden="true"></i> UE
+    </a>
+    <a href="{% url 'cours_liste' %}" class="mobile-nav-link {% if 'cours' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="ti ti-book-2" aria-hidden="true"></i> Cours
+    </a>
+    <a href="{% url 'salle_liste' %}" class="mobile-nav-link {% if 'salle' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="ti ti-building" aria-hidden="true"></i> Salles
+    </a>
+    <a href="{% url 'option_liste' %}" class="mobile-nav-link {% if 'option' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="ti ti-award" aria-hidden="true"></i> Options
+    </a>
+    {% endif %}
+    <a href="{% url 'grille_edt' %}" class="mobile-nav-link {% if 'grille' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="ti ti-calendar-week" aria-hidden="true"></i> Emplois
+    </a>
+  </div>
+</nav>
+{% endif %}
+
 <div class="app-layout">
   {% if user.is_authenticated %}
   <aside class="sidebar">
-    <span class="nav-section">Navigation</span>
+    <div class="sidebar-head">
+      <span class="nav-section">Navigation</span>
+      <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-label="Réduire le menu" aria-pressed="false" title="Réduire le menu">
+        <i class="ti ti-layout-sidebar-left-collapse" aria-hidden="true"></i>
+      </button>
+    </div>
     <a href="{% url 'tableau_de_bord' %}" class="nav-link {% if request.resolver_match.url_name == 'tableau_de_bord' %}active{% endif %}">
       <i class="ti ti-layout-dashboard" aria-hidden="true"></i> Tableau de bord
     </a>
@@ -553,7 +694,7 @@ document.addEventListener('DOMContentLoaded', function () {
     </a>
     {% endif %}
     <span class="nav-section">Planification</span>
-    <a href="{% url 'grille_edt' %}" class="nav-link {% if 'grille_edt' in request.resolver_match.url_name or 'ajouter_creneau_grille' in request.resolver_match.url_name or 'modifier_creneau_grille' in request.resolver_match.url_name %}active{% endif %}">
+    <a href="{% url 'grille_edt' %}" class="nav-link {% if 'grille' in request.resolver_match.url_name %}active{% endif %}">
       <i class="ti ti-calendar-week" aria-hidden="true"></i> Emplois du temps
     </a>
   </aside>

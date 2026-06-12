@@ -4,8 +4,8 @@
 {% block contenu %}
 
 <!-- ── Barre de titre + actions ── -->
-<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
-  <div style="display:flex;align-items:center;gap:14px;">
+<div class="edt-toolbar" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+  <div class="edt-toolbar-title" style="display:flex;align-items:center;gap:14px;">
     <div class="page-icon"><i class="ti ti-calendar-week"></i></div>
     <div>
       <h1 class="page-title" style="margin:0;">Emploi du Temps</h1>
@@ -23,7 +23,7 @@
   </div>
 
   <!-- Actions principales -->
-  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+  <div class="edt-toolbar-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
     {% if est_cd %}
     <a class="btn btn-primary" href="{% url 'ajouter_creneau_grille' %}?semaine={{ semaine|date:'Y-m-d' }}{% if salle_id_actif %}&salle={{ salle_id_actif }}{% endif %}">
       <i class="ti ti-plus"></i> Ajouter un créneau
@@ -76,12 +76,12 @@
 </div>
 
 <!-- ── Navigation semaines ── -->
-<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding:12px 14px;background:var(--gray-50);border-radius:12px;border:1px solid var(--gray-200);">
+<div class="edt-controls" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding:12px 14px;background:var(--gray-50);border-radius:12px;border:1px solid var(--gray-200);">
   <a href="/emplois-du-temps/grille/{{ semaine_prev|date:'Y-m-d' }}/{% if salle_id_actif %}?salle_id={{ salle_id_actif }}{% endif %}" class="btn btn-secondary btn-sm">
     <i class="ti ti-chevron-left"></i> Préc.
   </a>
 
-  <input type="week" id="semaineInput" class="form-control" style="width:180px;display:inline-block;"
+  <input type="week" id="semaineInput" class="form-control edt-week-input" style="width:180px;display:inline-block;"
          data-semaine="{{ semaine|date:'Y-m-d' }}"
          onchange="allerSemaine(this.value)">
 
@@ -90,7 +90,7 @@
   </a>
 
   {% if semaines_dispo %}
-  <select class="form-control" style="width:210px;display:inline-block;"
+  <select class="form-control edt-week-select" style="width:210px;display:inline-block;"
           onchange="if(this.value) window.location='/emplois-du-temps/grille/'+this.value+'/{% if salle_id_actif %}?salle_id={{ salle_id_actif }}{% endif %}'">
     <option value="">— Semaines planifiées —</option>
     {% for sd in semaines_dispo %}
@@ -102,7 +102,7 @@
   {% endif %}
 
   <!-- ── Filtre salle ── -->
-  <form method="GET" action="/emplois-du-temps/grille/{{ semaine|date:'Y-m-d' }}/" style="display:flex;align-items:center;">
+  <form class="edt-salle-form" method="GET" action="/emplois-du-temps/grille/{{ semaine|date:'Y-m-d' }}/" style="display:flex;align-items:center;">
     <div class="salle-select-wrap">
       <i class="ti ti-building salle-select-icon"></i>
       <select name="salle_id" class="salle-select" onchange="this.form.submit()">
@@ -257,6 +257,30 @@
 .salle-select-arrow{
   font-size:13px;color:var(--gray-400);
   position:absolute;right:8px;pointer-events:none;
+}
+@media(max-width:640px){
+  .edt-toolbar-title{align-items:flex-start!important}
+  .edt-toolbar-actions{width:100%}
+  .edt-toolbar-actions>.btn,
+  .edt-toolbar-actions>form,
+  .edt-toolbar-actions>form .btn,
+  .edt-toolbar-actions>#exportMenu,
+  .edt-toolbar-actions>#exportMenu>.btn{
+    width:100%;
+  }
+  .edt-toolbar-actions .btn{justify-content:center}
+  #exportDropdown{left:0;right:0;min-width:0!important}
+  .edt-controls{align-items:stretch!important}
+  .edt-controls>.btn{flex:1;justify-content:center}
+  .edt-week-input,
+  .edt-week-select,
+  .edt-salle-form,
+  .salle-select-wrap{
+    width:100%!important;
+  }
+  .salle-select{max-width:none;width:100%;min-width:0}
+  .edt-grid{min-width:760px;font-size:12px}
+  .edt-day-cell{min-width:118px}
 }
 </style>
 
