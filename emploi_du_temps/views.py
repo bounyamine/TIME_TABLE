@@ -326,12 +326,19 @@ def modifier_creneau_grille(request: HttpRequest, pk: int) -> HttpResponse:
 @cd_requis
 def supprimer_creneau_grille(request: HttpRequest, pk: int) -> HttpResponse:
     """Supprimer un créneau depuis la grille."""
-    creneau = get_object_or_404(Creneau.objects.select_related("emploiDuTemps"), pk=pk)
+    creneau = get_object_or_404(Creneau.objects.select_related("emploiDuTemps", "salle"), pk=pk)
     semaine = creneau.emploiDuTemps.semaine
+    emploi = creneau.emploiDuTemps
+    salle_id = creneau.salle_id
     if request.method == "POST":
         creneau.delete()
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({
+                "message": "Créneau supprimé.",
+                "redirect_url": _url_grille_emploi(emploi, salle_id),
+            })
         messages.success(request, "Créneau supprimé.")
-        return redirect(f"/emplois-du-temps/grille/{semaine.isoformat()}/?salle_id={creneau.salle_id}")
+        return redirect(f"/emplois-du-temps/grille/{semaine.isoformat()}/?salle_id={salle_id}")
     return render(request, "emploi_du_temps/grille/confirmer_suppression.html", {
         "creneau": creneau, "semaine": semaine,
     })
@@ -457,58 +464,83 @@ def ajax_cours_par_option(request: HttpRequest, option_id: int) -> JsonResponse:
     return JsonResponse(cours, safe=False)
 
 
-def _reponse_edition_cellule(request, emploi, message, statut=200):
+def _url_grille_emploi(emploi, salle_id=None):
+    url = f"/emplois-du-temps/grille/{emploi.semaine.isoformat()}/"
+    if salle_id:
+        url += f"?salle_id={salle_id}"
+    return url
+
+
+def _reponse_edition_cellule(request, emploi, message, statut=200, salle_id=None):
+    redirect_url = _url_grille_emploi(emploi, salle_id)
     if request.headers.get("x-requested-with") == "XMLHttpRequest":
-        return JsonResponse({"message": message}, status=statut)
+        return JsonResponse({"message": message, "redirect_url": redirect_url}, status=statut)
     if statut >= 400:
         messages.error(request, message)
     else:
         messages.success(request, message)
-    return redirect("editeur_emploi_du_temps", pk=emploi.pk)
+    return redirect(redirect_url)
+
+
+def _salle_cible_depuis_post(request: HttpRequest, salle_actuelle: Salle) -> Salle | None:
+    salle_id = request.POST.get("salle_id") or request.POST.get("salle")
+    if not salle_id:
+        return salle_actuelle
+    try:
+        return Salle.objects.get(pk=salle_id)
+    except (Salle.DoesNotExist, TypeError, ValueError):
+        return None
 
 
 @cd_requis
 def deplacer_creneau(request: HttpRequest, pk: int) -> HttpResponse:
-    creneau = get_object_or_404(Creneau.objects.select_related("emploiDuTemps"), pk=pk)
+    creneau = get_object_or_404(Creneau.objects.select_related("emploiDuTemps", "salle"), pk=pk)
     emploi = creneau.emploiDuTemps
     if request.method != "POST":
-        return redirect("editeur_emploi_du_temps", pk=emploi.pk)
+        return redirect(_url_grille_emploi(emploi, creneau.salle_id))
     plage = trouver_plage(request.POST.get("plage", ""))
     jour = request.POST.get("jour", "")
     if not plage or plage.get("pause") or jour not in dict(JOURS_EDT):
-        return _reponse_edition_cellule(request, emploi, "Plage ou jour invalide.", 400)
+        return _reponse_edition_cellule(request, emploi, "Plage ou jour invalide.", 400, creneau.salle_id)
+    salle = _salle_cible_depuis_post(request, creneau.salle)
+    if salle is None:
+        return _reponse_edition_cellule(request, emploi, "Salle invalide.", 400, creneau.salle_id)
     creneau.jour = jour
     creneau.heureDebut = plage["debut"]
     creneau.heureFin = plage["fin"]
+    creneau.salle = salle
     try:
         creneau.full_clean()
     except ValidationError as e:
-        return _reponse_edition_cellule(request, emploi, " ".join(e.messages), 400)
+        return _reponse_edition_cellule(request, emploi, " ".join(e.messages), 400, salle.pk)
     creneau.save()
-    return _reponse_edition_cellule(request, emploi, "Créneau déplacé.")
+    return _reponse_edition_cellule(request, emploi, "Créneau déplacé.", salle_id=salle.pk)
 
 
 @cd_requis
 def copier_creneau(request: HttpRequest, pk: int) -> HttpResponse:
-    source = get_object_or_404(Creneau.objects.select_related("emploiDuTemps"), pk=pk)
+    source = get_object_or_404(Creneau.objects.select_related("emploiDuTemps", "salle"), pk=pk)
     emploi = source.emploiDuTemps
     if request.method != "POST":
-        return redirect("editeur_emploi_du_temps", pk=emploi.pk)
+        return redirect(_url_grille_emploi(emploi, source.salle_id))
     plage = trouver_plage(request.POST.get("plage", ""))
     jour = request.POST.get("jour", "")
     if not plage or plage.get("pause") or jour not in dict(JOURS_EDT):
-        return _reponse_edition_cellule(request, emploi, "Plage ou jour invalide.", 400)
+        return _reponse_edition_cellule(request, emploi, "Plage ou jour invalide.", 400, source.salle_id)
+    salle = _salle_cible_depuis_post(request, source.salle)
+    if salle is None:
+        return _reponse_edition_cellule(request, emploi, "Salle invalide.", 400, source.salle_id)
     copie = Creneau(
         emploiDuTemps=emploi, cours=source.cours,
-        enseignant=source.enseignant, salle=source.salle, option=source.option,
+        enseignant=source.enseignant, salle=salle, option=source.option,
         jour=jour, heureDebut=plage["debut"], heureFin=plage["fin"],
     )
     try:
         copie.full_clean()
     except ValidationError as e:
-        return _reponse_edition_cellule(request, emploi, " ".join(e.messages), 400)
+        return _reponse_edition_cellule(request, emploi, " ".join(e.messages), 400, salle.pk)
     copie.save()
-    return _reponse_edition_cellule(request, emploi, "Créneau copié.")
+    return _reponse_edition_cellule(request, emploi, "Créneau copié.", salle_id=salle.pk)
 
 
 # ─────────────────────────────────────────────

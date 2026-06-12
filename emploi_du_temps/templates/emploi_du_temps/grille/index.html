@@ -140,10 +140,26 @@
       <tr>
         <td class="edt-horaire-cell"><strong>{{ ligne.plage.label }}</strong></td>
         {% for cellule in ligne.cellules %}
-        <td class="edt-day-cell"{% if est_cd and not cellule.creneaux %} data-add-url="{% url 'ajouter_creneau_grille' %}?semaine={{ semaine|date:'Y-m-d' }}{% if salle_id_actif %}&salle={{ salle_id_actif }}{% endif %}&jour={{ cellule.jour }}&plage={{ cellule.plage.id }}" onclick="window.location=this.dataset.addUrl" style="cursor:pointer;"{% endif %}>
+        <td class="edt-day-cell"
+            {% if est_cd %}
+            data-grid-cell
+            data-jour="{{ cellule.jour }}"
+            data-plage="{{ cellule.plage.id }}"
+            data-salle-id="{{ salle_id_actif|default:'' }}"
+            data-add-url="{% url 'ajouter_creneau_grille' %}?semaine={{ semaine|date:'Y-m-d' }}{% if salle_id_actif %}&salle={{ salle_id_actif }}{% endif %}&jour={{ cellule.jour }}&plage={{ cellule.plage.id }}"
+            {% endif %}>
 
           {% for cr in cellule.creneaux %}
-          <div class="edt-card">
+          <div class="edt-card"
+               {% if est_cd %}
+               draggable="true"
+               data-creneau-id="{{ cr.pk }}"
+               data-title="{{ cr.cours.intitule }}"
+               data-edit-url="{% url 'modifier_creneau_grille' cr.pk %}"
+               data-delete-url="{% url 'supprimer_creneau_grille' cr.pk %}"
+               data-move-url="{% url 'deplacer_creneau_grille' cr.pk %}"
+               data-copy-url="{% url 'copier_creneau_grille' cr.pk %}"
+               {% endif %}>
             {% if est_cd %}
             <div class="edt-card-actions">
               <a href="{% url 'modifier_creneau_grille' cr.pk %}" class="edt-act-btn edt-act-edit" title="Modifier">
@@ -185,6 +201,17 @@
 </table>
 </div>
 
+{% if est_cd %}
+<div class="edt-context-menu" id="edtContextMenu" role="menu" aria-hidden="true">
+  <button type="button" data-action="edit"><i class="ti ti-edit"></i> Modifier</button>
+  <button type="button" data-action="copy"><i class="ti ti-copy"></i> Copier</button>
+  <button type="button" data-action="cut"><i class="ti ti-cut"></i> Couper</button>
+  <button type="button" data-action="paste"><i class="ti ti-clipboard"></i> Coller ici</button>
+  <button type="button" data-action="add"><i class="ti ti-plus"></i> Ajouter ici</button>
+  <button type="button" data-action="delete" class="danger"><i class="ti ti-trash"></i> Supprimer</button>
+</div>
+{% endif %}
+
 <!-- Légende statuts -->
 {% if emplois_semaine %}
 <div style="margin-top:16px;padding:12px 16px;background:var(--gray-50);border-radius:10px;border:1px solid var(--gray-200);font-size:13px;">
@@ -208,6 +235,10 @@
 .edt-day-cell{border:2px solid #009a63;height:90px;min-width:130px;vertical-align:top;padding:4px;position:relative}
 .edt-card{background:#fff;border-radius:6px;margin-bottom:4px;overflow:hidden;position:relative;transition:box-shadow .15s,transform .15s}
 .edt-card:hover{box-shadow:0 4px 14px rgba(0,0,0,.12)}
+.edt-card[draggable="true"]{cursor:grab}
+.edt-card.is-dragging{opacity:.55;transform:scale(.98);cursor:grabbing}
+.edt-day-cell.is-drop-target{background:#ecfdf5;box-shadow:inset 0 0 0 2px var(--green)}
+.edt-day-cell.is-drop-denied{background:#fef2f2;box-shadow:inset 0 0 0 2px var(--red)}
 .edt-card-actions{display:none;position:absolute;top:3px;right:3px;gap:3px;z-index:2}
 .edt-card:hover .edt-card-actions{display:flex}
 .edt-act-btn{display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:5px;font-size:12px;text-decoration:none;transition:all .15s}
@@ -228,6 +259,31 @@
 .edt-pause-row td{border:2px solid #7030a0}
 .edt-pause-horaire{background:#bdd7ee!important;font-size:12px;vertical-align:middle;padding:6px 4px;font-weight:700;text-align:center}
 .edt-pause-cell{background:#bdd7ee!important;font-size:15px;font-weight:900;letter-spacing:3px;color:#1a1a2e;padding:10px;text-align:center}
+.edt-context-menu{
+  position:fixed;z-index:4000;display:none;min-width:184px;overflow:hidden;
+  background:#fff;border:1px solid var(--gray-200);border-radius:10px;
+  box-shadow:0 18px 45px rgba(15,23,42,.18);padding:5px;
+}
+.edt-context-menu.show{display:grid}
+.edt-context-menu button{
+  width:100%;border:0;background:transparent;color:var(--gray-700);
+  display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:7px;
+  font-family:'Inter',sans-serif;font-size:13px;font-weight:600;text-align:left;
+  cursor:pointer;
+}
+.edt-context-menu button:hover{background:var(--gray-100);color:var(--gray-900)}
+.edt-context-menu button i{font-size:16px;color:var(--blue)}
+.edt-context-menu button.danger{color:var(--red)}
+.edt-context-menu button.danger i{color:var(--red)}
+.edt-context-menu button[hidden]{display:none}
+.edt-action-toast{
+  position:fixed;right:20px;bottom:20px;z-index:4100;max-width:360px;
+  background:#fff;border:1px solid var(--gray-200);border-left:4px solid var(--blue);
+  border-radius:12px;box-shadow:0 16px 40px rgba(15,23,42,.16);
+  padding:12px 14px;color:var(--gray-700);font-size:13px;font-weight:700;
+}
+.edt-action-toast.error{border-left-color:var(--red);color:var(--red);background:var(--red-light)}
+.edt-action-toast.success{border-left-color:var(--green);color:var(--green-dark);background:var(--green-light)}
 /* Badges statut */
 .badge-statut{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700}
 .badge-publie{background:#d1fae5;color:#065f46}
@@ -322,5 +378,237 @@ const style = document.createElement('style');
 style.textContent = '#exportDropdown.show{display:block!important}';
 document.head.appendChild(style);
 </script>
+
+{% if est_cd %}
+<script>
+(function() {
+  const menu = document.getElementById('edtContextMenu');
+  if (!menu) return;
+
+  let activeCard = null;
+  let activeCell = null;
+  let draggedCard = null;
+  let toastTimer = null;
+  const csrfFromTemplate = "{{ csrf_token }}";
+
+  function csrfToken() {
+    const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
+    if (match) return decodeURIComponent(match[1]);
+    if (csrfFromTemplate && csrfFromTemplate !== 'NOTPROVIDED') return csrfFromTemplate;
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+  }
+
+  function cellPayload(cell) {
+    return {
+      jour: cell?.dataset.jour || '',
+      plage: cell?.dataset.plage || '',
+      salle_id: cell?.dataset.salleId || ''
+    };
+  }
+
+  function clipboard() {
+    try {
+      return JSON.parse(sessionStorage.getItem('edtClipboard') || 'null');
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function setClipboard(data) {
+    if (!data) {
+      sessionStorage.removeItem('edtClipboard');
+      return;
+    }
+    sessionStorage.setItem('edtClipboard', JSON.stringify(data));
+  }
+
+  function notify(message, type) {
+    document.querySelector('.edt-action-toast')?.remove();
+    const toast = document.createElement('div');
+    toast.className = 'edt-action-toast ' + (type || 'success');
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.remove(), 2800);
+  }
+
+  function closeMenu() {
+    menu.classList.remove('show');
+    menu.setAttribute('aria-hidden', 'true');
+  }
+
+  function positionMenu(x, y) {
+    menu.style.left = '0px';
+    menu.style.top = '0px';
+    menu.classList.add('show');
+    menu.setAttribute('aria-hidden', 'false');
+
+    const rect = menu.getBoundingClientRect();
+    const left = Math.min(x, window.innerWidth - rect.width - 10);
+    const top = Math.min(y, window.innerHeight - rect.height - 10);
+    menu.style.left = Math.max(10, left) + 'px';
+    menu.style.top = Math.max(10, top) + 'px';
+  }
+
+  function configureMenu() {
+    const hasCard = Boolean(activeCard);
+    const hasCell = Boolean(activeCell);
+    const hasClipboard = Boolean(clipboard());
+
+    menu.querySelector('[data-action="edit"]').hidden = !hasCard;
+    menu.querySelector('[data-action="copy"]').hidden = !hasCard;
+    menu.querySelector('[data-action="cut"]').hidden = !hasCard;
+    menu.querySelector('[data-action="delete"]').hidden = !hasCard;
+    menu.querySelector('[data-action="paste"]').hidden = !hasCell || !hasClipboard;
+    menu.querySelector('[data-action="add"]').hidden = !hasCell || hasCard;
+  }
+
+  async function postAction(url, payload) {
+    const body = new FormData();
+    Object.entries(payload || {}).forEach(([key, value]) => body.append(key, value));
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrfToken(),
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.message || "L'opération a échoué.");
+    }
+    return data;
+  }
+
+  function reloadAfter(data) {
+    window.location.href = data.redirect_url || window.location.href;
+  }
+
+  function cleanDropTargets() {
+    document.querySelectorAll('.edt-day-cell.is-drop-target,.edt-day-cell.is-drop-denied').forEach(cell => {
+      cell.classList.remove('is-drop-target', 'is-drop-denied');
+    });
+  }
+
+  document.addEventListener('contextmenu', function(event) {
+    const card = event.target.closest('.edt-card[data-creneau-id]');
+    const cell = event.target.closest('.edt-day-cell[data-grid-cell]');
+    if (!card && !cell) return;
+
+    event.preventDefault();
+    activeCard = card;
+    activeCell = cell;
+    configureMenu();
+    positionMenu(event.clientX, event.clientY);
+  });
+
+  document.addEventListener('click', function(event) {
+    if (!menu.contains(event.target)) closeMenu();
+  });
+
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') closeMenu();
+  });
+
+  menu.addEventListener('click', async function(event) {
+    const button = event.target.closest('button[data-action]');
+    if (!button) return;
+
+    const action = button.dataset.action;
+    const clip = clipboard();
+    closeMenu();
+
+    try {
+      if (action === 'edit' && activeCard) {
+        window.location.href = activeCard.dataset.editUrl;
+        return;
+      }
+      if (action === 'copy' && activeCard) {
+        setClipboard({
+          mode: 'copy',
+          title: activeCard.dataset.title,
+          url: activeCard.dataset.copyUrl
+        });
+        notify('Créneau copié. Clic droit sur une cellule pour le coller.', 'success');
+        return;
+      }
+      if (action === 'cut' && activeCard) {
+        setClipboard({
+          mode: 'cut',
+          title: activeCard.dataset.title,
+          url: activeCard.dataset.moveUrl
+        });
+        notify('Créneau prêt à être déplacé. Clic droit sur une cellule pour le coller.', 'success');
+        return;
+      }
+      if (action === 'paste' && activeCell && clip) {
+        const data = await postAction(clip.url, cellPayload(activeCell));
+        if (clip.mode === 'cut') setClipboard(null);
+        reloadAfter(data);
+        return;
+      }
+      if (action === 'add' && activeCell) {
+        window.location.href = activeCell.dataset.addUrl;
+        return;
+      }
+      if (action === 'delete' && activeCard) {
+        if (!confirm('Supprimer ce créneau ?')) return;
+        const data = await postAction(activeCard.dataset.deleteUrl, {});
+        reloadAfter(data);
+      }
+    } catch (error) {
+      notify(error.message, 'error');
+    }
+  });
+
+  document.addEventListener('dragstart', function(event) {
+    const card = event.target.closest('.edt-card[data-creneau-id]');
+    if (!card) return;
+    draggedCard = card;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', card.dataset.creneauId);
+    card.classList.add('is-dragging');
+    closeMenu();
+  });
+
+  document.addEventListener('dragend', function() {
+    draggedCard?.classList.remove('is-dragging');
+    draggedCard = null;
+    cleanDropTargets();
+  });
+
+  document.querySelectorAll('.edt-day-cell[data-grid-cell]').forEach(cell => {
+    cell.addEventListener('dragover', function(event) {
+      if (!draggedCard) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      cleanDropTargets();
+      cell.classList.add('is-drop-target');
+    });
+
+    cell.addEventListener('dragleave', function(event) {
+      if (!cell.contains(event.relatedTarget)) {
+        cell.classList.remove('is-drop-target');
+      }
+    });
+
+    cell.addEventListener('drop', async function(event) {
+      if (!draggedCard) return;
+      event.preventDefault();
+      cleanDropTargets();
+      try {
+        const data = await postAction(draggedCard.dataset.moveUrl, cellPayload(cell));
+        reloadAfter(data);
+      } catch (error) {
+        cell.classList.add('is-drop-denied');
+        notify(error.message, 'error');
+        setTimeout(() => cell.classList.remove('is-drop-denied'), 1800);
+      }
+    });
+  });
+})();
+</script>
+{% endif %}
 
 {% endblock %}
