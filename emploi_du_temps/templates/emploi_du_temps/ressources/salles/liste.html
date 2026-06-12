@@ -18,7 +18,7 @@
 <div class="card">
   <div class="card-head">
     <span class="card-head-title">Liste des salles</span>
-    <span class="count-pill">{{ salles.count }} au total</span>
+    <span class="count-pill">{{ page_obj.paginator.count }} au total</span>
   </div>
   {% if salles %}
   <div class="table-wrap">
@@ -52,6 +52,7 @@
       </tbody>
     </table>
   </div>
+  {% include "emploi_du_temps/includes/pagination.html" %}
   {% else %}
   <div class="empty-state">
     <div class="empty-ico"><i class="ti ti-building"></i></div>

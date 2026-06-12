@@ -522,7 +522,7 @@ def _redirect_apres_action(request: HttpRequest, fallback: str):
 
 
 def _utilisateur_liste(request, role: str, template: str, context_name: str):
-    utilisateurs = Utilisateur.objects.filter(role=role).select_related("option")
+    utilisateurs = Utilisateur.objects.filter(role=role).select_related("option").order_by("nom", "prenom", "username")
     page_obj, pagination_query = _paginer_ressources(request, utilisateurs)
     return render(request, template, {
         context_name: page_obj.object_list,
