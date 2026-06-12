@@ -16,6 +16,7 @@ urlpatterns = [
     path("emplois-du-temps/grille/creneaux/<int:pk>/supprimer/", views.supprimer_creneau_grille, name="supprimer_creneau_grille"),
     path("emplois-du-temps/grille/creneaux/<int:pk>/deplacer/", views.deplacer_creneau, name="deplacer_creneau_grille"),
     path("emplois-du-temps/grille/creneaux/<int:pk>/copier/", views.copier_creneau, name="copier_creneau_grille"),
+    path("emplois-du-temps/grille/creneaux/restaurer/", views.restaurer_creneau, name="restaurer_creneau_grille"),
     path("emplois-du-temps/grille/ajax/conflits/", views.ajax_conflits, name="ajax_conflits"),
     path("emplois-du-temps/grille/publier-semaine/", views.publier_semaine, name="publier_semaine"),
     path("emplois-du-temps/grille/depublier-semaine/", views.depublier_semaine, name="depublier_semaine"),

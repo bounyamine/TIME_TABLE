@@ -116,6 +116,29 @@
 
 </div>
 
+{% if est_cd %}
+<div class="edt-appbar" aria-label="Actions rapides de la grille">
+  <button type="button" class="edt-tool-btn" id="edtToolEdit" disabled title="Modifier le créneau sélectionné">
+    <i class="ti ti-edit"></i> Modifier
+  </button>
+  <button type="button" class="edt-tool-btn" id="edtToolCopy" disabled title="Ctrl+C">
+    <i class="ti ti-copy"></i> Copier
+  </button>
+  <button type="button" class="edt-tool-btn" id="edtToolCut" disabled title="Ctrl+X">
+    <i class="ti ti-cut"></i> Couper
+  </button>
+  <button type="button" class="edt-tool-btn" id="edtToolPaste" disabled title="Ctrl+V">
+    <i class="ti ti-clipboard"></i> Coller
+  </button>
+  <button type="button" class="edt-tool-btn danger" id="edtToolDelete" disabled title="Suppr">
+    <i class="ti ti-trash"></i> Supprimer
+  </button>
+  <span class="edt-save-indicator" id="edtSaveIndicator">
+    <i class="ti ti-circle-check"></i> Prêt
+  </span>
+</div>
+{% endif %}
+
 
 
 <!-- ── Grille officielle ── -->
@@ -155,6 +178,12 @@
                draggable="true"
                data-creneau-id="{{ cr.pk }}"
                data-title="{{ cr.cours.intitule }}"
+               data-semaine="{{ semaine|date:'Y-m-d' }}"
+               data-cours-id="{{ cr.cours_id }}"
+               data-enseignant-id="{{ cr.enseignant_id }}"
+               data-salle-id="{{ cr.salle_id }}"
+               data-jour="{{ cellule.jour }}"
+               data-plage="{{ cellule.plage.id }}"
                data-edit-url="{% url 'modifier_creneau_grille' cr.pk %}"
                data-delete-url="{% url 'supprimer_creneau_grille' cr.pk %}"
                data-move-url="{% url 'deplacer_creneau_grille' cr.pk %}"
@@ -199,6 +228,77 @@
   <button type="button" data-action="add"><i class="ti ti-plus"></i> Ajouter ici</button>
   <button type="button" data-action="delete" class="danger"><i class="ti ti-trash"></i> Supprimer</button>
 </div>
+
+<div class="edt-modal" id="edtQuickModal" aria-hidden="true">
+  <div class="edt-modal-backdrop" data-modal-close></div>
+  <div class="edt-modal-panel" role="dialog" aria-modal="true" aria-labelledby="edtQuickTitle">
+    <div class="edt-modal-head">
+      <div>
+        <h2 id="edtQuickTitle">Modifier le créneau</h2>
+        <p id="edtQuickSubtitle">Modification rapide</p>
+      </div>
+      <button type="button" class="edt-modal-close" data-modal-close aria-label="Fermer">
+        <i class="ti ti-x"></i>
+      </button>
+    </div>
+    <form id="edtQuickForm" class="edt-quick-form" method="post">
+      {% csrf_token %}
+      <input type="hidden" name="semaine" value="{{ semaine|date:'Y-m-d' }}">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="quickCours">Cours</label>
+          <select class="form-control" id="quickCours" name="cours" required>
+            {% for cours in cours_modal %}
+            <option value="{{ cours.pk }}">{{ cours.codeCours }} — {{ cours.intitule }} ({{ cours.option.nom }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="quickEnseignant">Enseignant</label>
+          <select class="form-control" id="quickEnseignant" name="enseignant" required>
+            {% for enseignant in enseignants_modal %}
+            <option value="{{ enseignant.pk }}">{{ enseignant.nom }} {{ enseignant.prenom }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="quickJour">Jour</label>
+          <select class="form-control" id="quickJour" name="jour" required>
+            {% for code, label in jours %}
+            <option value="{{ code }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="quickPlage">Créneau</label>
+          <select class="form-control" id="quickPlage" name="plage" required>
+            {% for plage in plages_modal %}
+            <option value="{{ plage.id }}">{{ plage.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="quickSalle">Salle</label>
+        <select class="form-control" id="quickSalle" name="salle" required>
+          {% for salle in salles %}
+          <option value="{{ salle.pk }}">{{ salle.nom }} — {{ salle.site }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="edt-modal-actions">
+        <a href="#" class="btn btn-secondary" id="edtQuickFullEdit">
+          <i class="ti ti-external-link"></i> Formulaire complet
+        </a>
+        <button type="submit" class="btn btn-success">
+          <i class="ti ti-device-floppy"></i> Enregistrer
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endif %}
 
 <!-- Légende statuts -->
@@ -226,6 +326,7 @@
 .edt-card:hover{box-shadow:0 4px 14px rgba(0,0,0,.12)}
 .edt-card[draggable="true"]{cursor:grab}
 .edt-card.is-dragging{opacity:.55;transform:scale(.98);cursor:grabbing}
+.edt-day-cell.is-selected{background:#eff6ff;box-shadow:inset 0 0 0 2px var(--blue)}
 .edt-day-cell.is-drop-target{background:#ecfdf5;box-shadow:inset 0 0 0 2px var(--green)}
 .edt-day-cell.is-drop-denied{background:#fef2f2;box-shadow:inset 0 0 0 2px var(--red)}
 .edt-card-body{padding:6px 8px;text-align:center}
@@ -259,13 +360,57 @@
 .edt-context-menu button.danger i{color:var(--red)}
 .edt-context-menu button[hidden]{display:none}
 .edt-action-toast{
-  position:fixed;right:20px;bottom:20px;z-index:4100;max-width:360px;
+  position:fixed;right:20px;bottom:20px;z-index:4100;max-width:420px;
   background:#fff;border:1px solid var(--gray-200);border-left:4px solid var(--blue);
   border-radius:12px;box-shadow:0 16px 40px rgba(15,23,42,.16);
   padding:12px 14px;color:var(--gray-700);font-size:13px;font-weight:700;
+  display:flex;align-items:center;gap:12px;
 }
+.edt-action-toast span{line-height:1.35}
+.edt-action-toast button{margin-left:auto;border:0;background:transparent;color:var(--blue);font-weight:800;cursor:pointer;font-family:'Inter',sans-serif}
 .edt-action-toast.error{border-left-color:var(--red);color:var(--red);background:var(--red-light)}
 .edt-action-toast.success{border-left-color:var(--green);color:var(--green-dark);background:var(--green-light)}
+.edt-appbar{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:14px;
+  padding:8px;border:1px solid var(--gray-200);border-radius:12px;background:#fff;
+  box-shadow:var(--shadow-sm);
+}
+.edt-tool-btn{
+  display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 11px;
+  border:1px solid var(--gray-200);border-radius:8px;background:#fff;color:var(--gray-700);
+  font-family:'Inter',sans-serif;font-size:12px;font-weight:700;cursor:pointer;
+  transition:all .16s;
+}
+.edt-tool-btn:hover:not(:disabled){background:var(--blue-light);border-color:var(--blue-mid);color:var(--blue)}
+.edt-tool-btn:disabled{opacity:.45;cursor:not-allowed}
+.edt-tool-btn.danger:hover:not(:disabled){background:var(--red-light);border-color:#fecaca;color:var(--red)}
+.edt-save-indicator{
+  margin-left:auto;display:inline-flex;align-items:center;gap:6px;color:var(--gray-500);
+  font-size:12px;font-weight:800;padding:0 6px;
+}
+.edt-save-indicator.saving{color:var(--blue)}
+.edt-save-indicator.saved{color:var(--green-dark)}
+.edt-save-indicator.error{color:var(--red)}
+.edt-modal{position:fixed;inset:0;z-index:4050;display:none;align-items:center;justify-content:center;padding:18px}
+.edt-modal.show{display:flex}
+.edt-modal-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.42)}
+.edt-modal-panel{
+  position:relative;width:min(680px,100%);max-height:calc(100vh - 36px);overflow:auto;
+  background:#fff;border-radius:14px;border:1px solid var(--gray-200);box-shadow:0 24px 70px rgba(15,23,42,.25);
+}
+.edt-modal-head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+  padding:18px 22px;border-bottom:1px solid var(--gray-100);background:var(--gray-50);
+}
+.edt-modal-head h2{margin:0;font-size:17px;color:var(--gray-900)}
+.edt-modal-head p{margin:4px 0 0;color:var(--gray-500);font-size:12.5px}
+.edt-modal-close{
+  width:32px;height:32px;border:0;border-radius:8px;background:#fff;color:var(--gray-500);
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.edt-modal-close:hover{background:var(--gray-100);color:var(--gray-900)}
+.edt-quick-form{padding:22px}
+.edt-modal-actions{display:flex;justify-content:flex-end;gap:10px;padding-top:18px;border-top:1px solid var(--gray-100);flex-wrap:wrap}
 /* Badges statut */
 .badge-statut{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700}
 .badge-publie{background:#d1fae5;color:#065f46}
@@ -369,9 +514,24 @@ document.head.appendChild(style);
 
   let activeCard = null;
   let activeCell = null;
+  let selectedCard = null;
+  let selectedCell = null;
   let draggedCard = null;
   let toastTimer = null;
   const csrfFromTemplate = "{{ csrf_token }}";
+  const restoreUrl = "{% url 'restaurer_creneau_grille' %}";
+  const quickModal = document.getElementById('edtQuickModal');
+  const quickForm = document.getElementById('edtQuickForm');
+  const quickFullEdit = document.getElementById('edtQuickFullEdit');
+  const quickSubtitle = document.getElementById('edtQuickSubtitle');
+  const saveIndicator = document.getElementById('edtSaveIndicator');
+  const tools = {
+    edit: document.getElementById('edtToolEdit'),
+    copy: document.getElementById('edtToolCopy'),
+    cut: document.getElementById('edtToolCut'),
+    paste: document.getElementById('edtToolPaste'),
+    delete: document.getElementById('edtToolDelete')
+  };
 
   function csrfToken() {
     const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
@@ -385,6 +545,29 @@ document.head.appendChild(style);
       jour: cell?.dataset.jour || '',
       plage: cell?.dataset.plage || '',
       salle_id: cell?.dataset.salleId || ''
+    };
+  }
+
+  function cardPayload(card) {
+    return {
+      semaine: card?.dataset.semaine || "{{ semaine|date:'Y-m-d' }}",
+      cours_id: card?.dataset.coursId || '',
+      enseignant_id: card?.dataset.enseignantId || '',
+      salle_id: card?.dataset.salleId || '',
+      jour: card?.dataset.jour || '',
+      plage: card?.dataset.plage || ''
+    };
+  }
+
+  function cardFormPayload(card) {
+    const payload = cardPayload(card);
+    return {
+      semaine: payload.semaine,
+      cours: payload.cours_id,
+      enseignant: payload.enseignant_id,
+      salle: payload.salle_id,
+      jour: payload.jour,
+      plage: payload.plage
     };
   }
 
@@ -404,14 +587,57 @@ document.head.appendChild(style);
     sessionStorage.setItem('edtClipboard', JSON.stringify(data));
   }
 
-  function notify(message, type) {
+  function setSaveState(state, message) {
+    if (!saveIndicator) return;
+    saveIndicator.classList.remove('saving', 'saved', 'error');
+    saveIndicator.classList.add(state);
+    const icon = state === 'saving' ? 'ti-loader-2' : state === 'error' ? 'ti-alert-circle' : 'ti-circle-check';
+    saveIndicator.innerHTML = '<i class="ti ' + icon + '"></i> ' + message;
+  }
+
+  function notify(message, type, action) {
     document.querySelector('.edt-action-toast')?.remove();
     const toast = document.createElement('div');
     toast.className = 'edt-action-toast ' + (type || 'success');
-    toast.textContent = message;
+    const text = document.createElement('span');
+    text.textContent = message;
+    toast.appendChild(text);
+    if (action) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = action.label;
+      button.addEventListener('click', action.handler);
+      toast.appendChild(button);
+    }
     document.body.appendChild(toast);
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.remove(), 2800);
+    toastTimer = setTimeout(() => toast.remove(), action ? 7000 : 2800);
+  }
+
+  function updateToolbar() {
+    const hasCard = Boolean(selectedCard);
+    const hasCell = Boolean(selectedCell);
+    const hasClipboard = Boolean(clipboard());
+    tools.edit.disabled = !hasCard;
+    tools.copy.disabled = !hasCard;
+    tools.cut.disabled = !hasCard;
+    tools.delete.disabled = !hasCard;
+    tools.paste.disabled = !hasCell || !hasClipboard;
+  }
+
+  function selectCell(cell) {
+    document.querySelectorAll('.edt-day-cell.is-selected').forEach(item => item.classList.remove('is-selected'));
+    selectedCell = cell || null;
+    selectedCell?.classList.add('is-selected');
+    updateToolbar();
+  }
+
+  function selectCard(card) {
+    document.querySelectorAll('.edt-card.is-selected').forEach(item => item.classList.remove('is-selected'));
+    selectedCard = card || null;
+    selectedCard?.classList.add('is-selected');
+    selectCell(selectedCard?.closest('.edt-day-cell[data-grid-cell]') || selectedCell);
+    updateToolbar();
   }
 
   function closeMenu() {
@@ -446,8 +672,11 @@ document.head.appendChild(style);
   }
 
   async function postAction(url, payload) {
-    const body = new FormData();
-    Object.entries(payload || {}).forEach(([key, value]) => body.append(key, value));
+    setSaveState('saving', 'Enregistrement...');
+    const body = payload instanceof FormData ? payload : new FormData();
+    if (!(payload instanceof FormData)) {
+      Object.entries(payload || {}).forEach(([key, value]) => body.append(key, value));
+    }
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -458,8 +687,10 @@ document.head.appendChild(style);
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
+      setSaveState('error', 'Erreur');
       throw new Error(data.message || "L'opération a échoué.");
     }
+    setSaveState('saved', 'Sauvegardé');
     return data;
   }
 
@@ -467,10 +698,93 @@ document.head.appendChild(style);
     window.location.href = data.redirect_url || window.location.href;
   }
 
+  function setPendingUndo(message, url, payload) {
+    sessionStorage.setItem('edtPendingUndo', JSON.stringify({ message, url, payload }));
+  }
+
+  function runPendingUndoPrompt() {
+    let undo = null;
+    try {
+      undo = JSON.parse(sessionStorage.getItem('edtPendingUndo') || 'null');
+    } catch (e) {}
+    if (!undo) return;
+    sessionStorage.removeItem('edtPendingUndo');
+    notify(undo.message, 'success', {
+      label: 'Annuler',
+      handler: async function() {
+        try {
+          const data = await postAction(undo.url, undo.payload || {});
+          reloadAfter(data);
+        } catch (error) {
+          notify(error.message, 'error');
+        }
+      }
+    });
+  }
+
   function cleanDropTargets() {
     document.querySelectorAll('.edt-day-cell.is-drop-target,.edt-day-cell.is-drop-denied').forEach(cell => {
       cell.classList.remove('is-drop-target', 'is-drop-denied');
     });
+  }
+
+  function openQuickEdit(card) {
+    if (!card || !quickModal || !quickForm) return;
+    selectCard(card);
+    quickForm.action = card.dataset.editUrl;
+    quickSubtitle.textContent = card.dataset.title || 'Modification rapide';
+    quickFullEdit.href = card.dataset.editUrl;
+    quickForm.elements.cours.value = card.dataset.coursId || '';
+    quickForm.elements.enseignant.value = card.dataset.enseignantId || '';
+    quickForm.elements.salle.value = card.dataset.salleId || '';
+    quickForm.elements.jour.value = card.dataset.jour || '';
+    quickForm.elements.plage.value = card.dataset.plage || '';
+    quickModal.classList.add('show');
+    quickModal.setAttribute('aria-hidden', 'false');
+    quickForm.elements.cours.focus();
+  }
+
+  function closeQuickEdit() {
+    quickModal?.classList.remove('show');
+    quickModal?.setAttribute('aria-hidden', 'true');
+  }
+
+  function copySelected(mode) {
+    if (!selectedCard) return;
+    setClipboard({
+      mode,
+      title: selectedCard.dataset.title,
+      url: mode === 'cut' ? selectedCard.dataset.moveUrl : selectedCard.dataset.copyUrl,
+      previousPayload: cardPayload(selectedCard)
+    });
+    updateToolbar();
+    notify(
+      mode === 'cut'
+        ? 'Créneau prêt à être déplacé. Sélectionnez une cellule puis collez.'
+        : 'Créneau copié. Sélectionnez une cellule puis collez.',
+      'success'
+    );
+  }
+
+  async function pasteInto(cell) {
+    const clip = clipboard();
+    if (!cell || !clip) return;
+    const data = await postAction(clip.url, cellPayload(cell));
+    if (clip.mode === 'cut') {
+      setClipboard(null);
+      setPendingUndo('Créneau déplacé.', clip.url, clip.previousPayload);
+    } else if (data.delete_url) {
+      setPendingUndo('Créneau copié.', data.delete_url, {});
+    }
+    reloadAfter(data);
+  }
+
+  async function deleteSelected() {
+    if (!selectedCard || !confirm('Supprimer ce créneau ?')) return;
+    const restorePayload = cardPayload(selectedCard);
+    const data = await postAction(selectedCard.dataset.deleteUrl, {});
+    setPendingUndo('Créneau supprimé.', restoreUrl, restorePayload);
+    reloadAfter(data);
   }
 
   document.addEventListener('contextmenu', function(event) {
@@ -481,16 +795,91 @@ document.head.appendChild(style);
     event.preventDefault();
     activeCard = card;
     activeCell = cell;
+    if (card) selectCard(card);
+    else selectCell(cell);
     configureMenu();
     positionMenu(event.clientX, event.clientY);
   });
 
   document.addEventListener('click', function(event) {
     if (!menu.contains(event.target)) closeMenu();
+    const card = event.target.closest('.edt-card[data-creneau-id]');
+    const cell = event.target.closest('.edt-day-cell[data-grid-cell]');
+    if (card) {
+      selectCard(card);
+      return;
+    }
+    if (cell && !event.target.closest('a, button')) {
+      selectCard(null);
+      selectCell(cell);
+    }
   });
 
-  document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') closeMenu();
+  document.addEventListener('dblclick', function(event) {
+    const card = event.target.closest('.edt-card[data-creneau-id]');
+    if (card) openQuickEdit(card);
+  });
+
+  document.querySelectorAll('[data-modal-close]').forEach(item => {
+    item.addEventListener('click', closeQuickEdit);
+  });
+
+  tools.edit.addEventListener('click', () => openQuickEdit(selectedCard));
+  tools.copy.addEventListener('click', () => copySelected('copy'));
+  tools.cut.addEventListener('click', () => copySelected('cut'));
+  tools.paste.addEventListener('click', async () => {
+    try { await pasteInto(selectedCell); } catch (error) { notify(error.message, 'error'); }
+  });
+  tools.delete.addEventListener('click', async () => {
+    try { await deleteSelected(); } catch (error) { notify(error.message, 'error'); }
+  });
+
+  quickForm?.addEventListener('submit', async function(event) {
+    event.preventDefault();
+    if (!selectedCard) return;
+    const undoPayload = cardFormPayload(selectedCard);
+    const formData = new FormData(quickForm);
+    try {
+      const data = await postAction(quickForm.action, formData);
+      setPendingUndo('Créneau modifié.', selectedCard.dataset.editUrl, undoPayload);
+      reloadAfter(data);
+    } catch (error) {
+      notify(error.message, 'error');
+    }
+  });
+
+  document.addEventListener('keydown', async function(event) {
+    const target = event.target;
+    const isTyping = target.closest('input, select, textarea') || quickModal?.classList.contains('show');
+    if (event.key === 'Escape') {
+      closeMenu();
+      closeQuickEdit();
+      selectCard(null);
+      selectCell(null);
+      return;
+    }
+    if (isTyping) return;
+    try {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'c') {
+        event.preventDefault();
+        copySelected('copy');
+      } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'x') {
+        event.preventDefault();
+        copySelected('cut');
+      } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'v') {
+        event.preventDefault();
+        await pasteInto(selectedCell);
+      } else if (event.key === 'Delete' || event.key === 'Backspace') {
+        if (!selectedCard) return;
+        event.preventDefault();
+        await deleteSelected();
+      } else if (event.key === 'Enter' && selectedCard) {
+        event.preventDefault();
+        openQuickEdit(selectedCard);
+      }
+    } catch (error) {
+      notify(error.message, 'error');
+    }
   });
 
   menu.addEventListener('click', async function(event) {
@@ -503,31 +892,21 @@ document.head.appendChild(style);
 
     try {
       if (action === 'edit' && activeCard) {
-        window.location.href = activeCard.dataset.editUrl;
+        openQuickEdit(activeCard);
         return;
       }
       if (action === 'copy' && activeCard) {
-        setClipboard({
-          mode: 'copy',
-          title: activeCard.dataset.title,
-          url: activeCard.dataset.copyUrl
-        });
-        notify('Créneau copié. Clic droit sur une cellule pour le coller.', 'success');
+        selectCard(activeCard);
+        copySelected('copy');
         return;
       }
       if (action === 'cut' && activeCard) {
-        setClipboard({
-          mode: 'cut',
-          title: activeCard.dataset.title,
-          url: activeCard.dataset.moveUrl
-        });
-        notify('Créneau prêt à être déplacé. Clic droit sur une cellule pour le coller.', 'success');
+        selectCard(activeCard);
+        copySelected('cut');
         return;
       }
       if (action === 'paste' && activeCell && clip) {
-        const data = await postAction(clip.url, cellPayload(activeCell));
-        if (clip.mode === 'cut') setClipboard(null);
-        reloadAfter(data);
+        await pasteInto(activeCell);
         return;
       }
       if (action === 'add' && activeCell) {
@@ -535,9 +914,8 @@ document.head.appendChild(style);
         return;
       }
       if (action === 'delete' && activeCard) {
-        if (!confirm('Supprimer ce créneau ?')) return;
-        const data = await postAction(activeCard.dataset.deleteUrl, {});
-        reloadAfter(data);
+        selectCard(activeCard);
+        await deleteSelected();
       }
     } catch (error) {
       notify(error.message, 'error');
@@ -548,8 +926,10 @@ document.head.appendChild(style);
     const card = event.target.closest('.edt-card[data-creneau-id]');
     if (!card) return;
     draggedCard = card;
+    selectCard(card);
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('text/plain', card.dataset.creneauId);
+    event.dataTransfer.setData('application/json', JSON.stringify(cardPayload(card)));
     card.classList.add('is-dragging');
     closeMenu();
   });
@@ -578,9 +958,11 @@ document.head.appendChild(style);
     cell.addEventListener('drop', async function(event) {
       if (!draggedCard) return;
       event.preventDefault();
+      const oldPayload = cardPayload(draggedCard);
       cleanDropTargets();
       try {
         const data = await postAction(draggedCard.dataset.moveUrl, cellPayload(cell));
+        setPendingUndo('Créneau déplacé.', draggedCard.dataset.moveUrl, oldPayload);
         reloadAfter(data);
       } catch (error) {
         cell.classList.add('is-drop-denied');
@@ -589,6 +971,9 @@ document.head.appendChild(style);
       }
     });
   });
+
+  runPendingUndoPrompt();
+  updateToolbar();
 })();
 </script>
 {% endif %}

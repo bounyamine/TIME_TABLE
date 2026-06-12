@@ -192,6 +192,9 @@ def grille_edt(request: HttpRequest, semaine: str | None = None) -> HttpResponse
         "semaines_dispo": semaines_dispo,
         "est_cd": est_cd,
         "emplois_semaine": emplois_semaine,
+        "cours_modal": Cours.objects.select_related("ue", "option").all(),
+        "enseignants_modal": Utilisateur.objects.filter(role=Utilisateur.Role.ENSEIGNANT).order_by("nom", "prenom"),
+        "plages_modal": [p for p in PLAGES_HORAIRES if not p.get("pause")],
     })
 
 
@@ -293,13 +296,28 @@ def modifier_creneau_grille(request: HttpRequest, pk: int) -> HttpResponse:
                 creneau.save()
                 messages.success(request, "Créneau modifié avec succès.")
             except ValidationError as e:
+                if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                    return JsonResponse({"message": " ".join(e.messages)}, status=400)
                 for msg in e.messages:
                     messages.error(request, msg)
                 return render(request, "emploi_du_temps/grille/formulaire.html", {
                     "form": form, "semaine": semaine, "titre": "Modifier un créneau",
                     "creneau": creneau, "plages": PLAGES_HORAIRES, "jours": JOURS_EDT,
                 })
+            if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                return JsonResponse({
+                    "message": "Créneau modifié.",
+                    "redirect_url": _url_grille_emploi(creneau.emploiDuTemps, creneau.salle_id),
+                })
             return redirect(f"/emplois-du-temps/grille/{semaine.isoformat()}/?salle_id={creneau.salle_id}")
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            errors = []
+            for field_errors in form.errors.values():
+                errors.extend(field_errors)
+            return JsonResponse({
+                "message": " ".join(errors) or "Formulaire invalide.",
+                "errors": form.errors,
+            }, status=400)
     else:
         # Préremplir le formulaire avec les valeurs existantes
         # Trouver la plage correspondante
@@ -471,10 +489,13 @@ def _url_grille_emploi(emploi, salle_id=None):
     return url
 
 
-def _reponse_edition_cellule(request, emploi, message, statut=200, salle_id=None):
+def _reponse_edition_cellule(request, emploi, message, statut=200, salle_id=None, extra=None):
     redirect_url = _url_grille_emploi(emploi, salle_id)
     if request.headers.get("x-requested-with") == "XMLHttpRequest":
-        return JsonResponse({"message": message, "redirect_url": redirect_url}, status=statut)
+        payload = {"message": message, "redirect_url": redirect_url}
+        if extra:
+            payload.update(extra)
+        return JsonResponse(payload, status=statut)
     if statut >= 400:
         messages.error(request, message)
     else:
@@ -540,7 +561,54 @@ def copier_creneau(request: HttpRequest, pk: int) -> HttpResponse:
     except ValidationError as e:
         return _reponse_edition_cellule(request, emploi, " ".join(e.messages), 400, salle.pk)
     copie.save()
-    return _reponse_edition_cellule(request, emploi, "Créneau copié.", salle_id=salle.pk)
+    return _reponse_edition_cellule(
+        request,
+        emploi,
+        "Créneau copié.",
+        salle_id=salle.pk,
+        extra={"delete_url": f"/emplois-du-temps/grille/creneaux/{copie.pk}/supprimer/"},
+    )
+
+
+@cd_requis
+@require_POST
+def restaurer_creneau(request: HttpRequest) -> HttpResponse:
+    semaine_date = _get_lundi(request.POST.get("semaine"))
+    plage = trouver_plage(request.POST.get("plage", ""))
+    jour = request.POST.get("jour", "")
+    if not plage or plage.get("pause") or jour not in dict(JOURS_EDT):
+        return JsonResponse({"message": "Plage ou jour invalide."}, status=400)
+
+    try:
+        cours = Cours.objects.get(pk=request.POST.get("cours_id"))
+        enseignant = Utilisateur.objects.get(pk=request.POST.get("enseignant_id"), role=Utilisateur.Role.ENSEIGNANT)
+        salle = Salle.objects.get(pk=request.POST.get("salle_id"))
+    except (Cours.DoesNotExist, Utilisateur.DoesNotExist, Salle.DoesNotExist, TypeError, ValueError):
+        return JsonResponse({"message": "Données du créneau invalides."}, status=400)
+
+    emploi, _ = EmploiDuTemps.objects.get_or_create(
+        semaine=semaine_date,
+        defaults={"creePar": request.user, "statut": EmploiDuTemps.Statut.BROUILLON},
+    )
+    creneau = Creneau(
+        emploiDuTemps=emploi,
+        jour=jour,
+        heureDebut=plage["debut"],
+        heureFin=plage["fin"],
+        cours=cours,
+        enseignant=enseignant,
+        salle=salle,
+        option=cours.option,
+    )
+    try:
+        creneau.full_clean()
+    except ValidationError as e:
+        return JsonResponse({"message": " ".join(e.messages)}, status=400)
+    creneau.save()
+    return JsonResponse({
+        "message": "Créneau restauré.",
+        "redirect_url": _url_grille_emploi(emploi, salle.pk),
+    })
 
 
 # ─────────────────────────────────────────────
