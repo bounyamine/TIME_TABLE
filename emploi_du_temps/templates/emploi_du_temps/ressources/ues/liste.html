@@ -7,7 +7,7 @@
     <div class="page-icon"><i class="ti ti-components"></i></div>
     <div>
       <h1 class="page-title">Unités d’enseignement</h1>
-      <p class="page-sub">Gérez les UE et leurs cours associés</p>
+      <p class="page-sub">Gérez les UE</p>
     </div>
   </div>
   <a href="{% url 'ue_creer' %}" class="btn btn-success">
@@ -27,7 +27,6 @@
         <tr>
           <th>Code UE</th>
           <th>Intitulé UE</th>
-          <th>Cours associés</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -36,14 +35,6 @@
         <tr>
           <td><span class="badge badge-blue">{{ ue.codeUE }}</span></td>
           <td class="td-bold">{{ ue.intituleUE }}</td>
-          <td>
-            <span class="badge badge-orange"><span class="dot"></span>{{ ue.cours.count }}/2</span>
-            {% for cours in ue.cours.all %}
-              <div style="margin-top:4px;">{{ cours.intitule }}</div>
-            {% empty %}
-              <div style="margin-top:4px;color:var(--gray-500);">Aucun cours rattaché</div>
-            {% endfor %}
-          </td>
           <td>
             <div class="td-actions">
               <a href="{% url 'ue_modifier' ue.codeUE %}" class="btn btn-outline btn-sm">

@@ -1,9 +1,21 @@
 from django import forms
 from django.contrib.auth import password_validation
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 
 from .models import Cours, Creneau, EmploiDuTemps, Option, Salle, Utilisateur
 from .grille import PLAGES_HORAIRES, JOURS_EDT, trouver_plage
+
+
+def enseignants_actifs_queryset():
+    return Utilisateur.objects.filter(
+        role=Utilisateur.Role.ENSEIGNANT,
+        is_active=True,
+    ).order_by("nom", "prenom")
+
+
+def cours_actifs_queryset():
+    return Cours.objects.select_related("ue", "option").filter(status=True)
 
 
 class CoursModelChoiceField(forms.ModelChoiceField):
@@ -134,8 +146,20 @@ class CreneauForm(forms.ModelForm):
     def __init__(self, *args, emploi_du_temps: EmploiDuTemps, **kwargs):
         super().__init__(*args, **kwargs)
         self.emploi_du_temps = emploi_du_temps
-        self.fields["cours"].queryset = Cours.objects.select_related("ue", "option").all()
-        self.fields["enseignant"].queryset = Utilisateur.objects.filter(role=Utilisateur.Role.ENSEIGNANT)
+        cours = cours_actifs_queryset()
+        if self.instance and self.instance.cours_id:
+            cours = Cours.objects.select_related("ue", "option").filter(
+                Q(status=True) | Q(pk=self.instance.cours_id)
+            )
+        self.fields["cours"].queryset = cours
+        enseignants = enseignants_actifs_queryset()
+        if self.instance and self.instance.enseignant_id:
+            enseignants = Utilisateur.objects.filter(
+                role=Utilisateur.Role.ENSEIGNANT,
+            ).filter(
+                Q(is_active=True) | Q(pk=self.instance.enseignant_id)
+            ).order_by("nom", "prenom")
+        self.fields["enseignant"].queryset = enseignants
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-control")
 
@@ -186,7 +210,7 @@ class CreneauDirectForm(forms.Form):
     plage      = forms.ChoiceField(choices=[("", "— Sélectionner —")] + PLAGE_CHOICES, label="Créneau horaire")
     cours      = CoursModelChoiceField(queryset=Cours.objects.none(), label="Cours")
     enseignant = forms.ModelChoiceField(
-        queryset=Utilisateur.objects.filter(role=Utilisateur.Role.ENSEIGNANT),
+        queryset=enseignants_actifs_queryset(),
         label="Enseignant",
     )
     salle      = forms.ModelChoiceField(queryset=Salle.objects.all(), label="Salle")
@@ -196,7 +220,20 @@ class CreneauDirectForm(forms.Form):
         self.instance = instance
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-control")
-        self.fields["cours"].queryset = Cours.objects.select_related("ue", "option").all()
+        cours = cours_actifs_queryset()
+        if instance and instance.cours_id:
+            cours = Cours.objects.select_related("ue", "option").filter(
+                Q(status=True) | Q(pk=instance.cours_id)
+            )
+        self.fields["cours"].queryset = cours
+        enseignants = enseignants_actifs_queryset()
+        if instance and instance.enseignant_id:
+            enseignants = Utilisateur.objects.filter(
+                role=Utilisateur.Role.ENSEIGNANT,
+            ).filter(
+                Q(is_active=True) | Q(pk=instance.enseignant_id)
+            ).order_by("nom", "prenom")
+        self.fields["enseignant"].queryset = enseignants
 
     def clean_semaine(self):
         """Force la date au lundi de la semaine — sécurité côté serveur."""

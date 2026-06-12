@@ -6,11 +6,13 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.views.decorators.http import require_POST
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.db.models import ProtectedError
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from emploi_du_temps.forms import (
     CreneauDirectForm,
@@ -179,7 +181,7 @@ def grille_edt(request: HttpRequest, semaine: str | None = None) -> HttpResponse
 
 @cd_requis
 def ajouter_creneau_grille(request: HttpRequest) -> HttpResponse:
-    """Formulaire d'ajout d'un créneau depuis la grille (équivalent PHP /edt/create)."""
+    """Formulaire d'ajout d'un créneau depuis la grille"""
     semaine_str = request.GET.get("semaine") or request.POST.get("semaine") or str(date.today())
     semaine_date = _get_lundi(semaine_str)
 
@@ -428,7 +430,14 @@ def ajax_conflits(request: HttpRequest) -> JsonResponse:
 @login_required
 def ajax_cours_par_option(request: HttpRequest, option_id: int) -> JsonResponse:
     """Retourne les cours d'une option (équivalent PHP /edt/cours-par-filiere)."""
-    cours = list(Cours.objects.filter(option_id=option_id).values("id", "codeCours", "intitule", "ue_id"))    
+    cours = list(
+        Cours.objects.filter(option_id=option_id, status=True).values(
+            "id",
+            "codeCours",
+            "intitule",
+            "ue_id",
+        )
+    )
     return JsonResponse(cours, safe=False)
 
 
@@ -490,10 +499,36 @@ def copier_creneau(request: HttpRequest, pk: int) -> HttpResponse:
 #  RESSOURCES
 # ─────────────────────────────────────────────
 
+RESSOURCES_PAR_PAGE = 10
+
+
+def _paginer_ressources(request: HttpRequest, queryset, par_page: int = RESSOURCES_PAR_PAGE):
+    paginator = Paginator(queryset, par_page)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    query_params = request.GET.copy()
+    query_params.pop("page", None)
+    return page_obj, query_params.urlencode()
+
+
+def _redirect_apres_action(request: HttpRequest, fallback: str):
+    next_url = request.POST.get("next", "")
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(next_url)
+    return redirect(fallback)
+
 
 def _utilisateur_liste(request, role: str, template: str, context_name: str):
     utilisateurs = Utilisateur.objects.filter(role=role).select_related("option")
-    return render(request, template, {context_name: utilisateurs})
+    page_obj, pagination_query = _paginer_ressources(request, utilisateurs)
+    return render(request, template, {
+        context_name: page_obj.object_list,
+        "page_obj": page_obj,
+        "pagination_query": pagination_query,
+    })
 
 
 def _utilisateur_creer(request, role: str, template: str, redirect_name: str, label: str):
@@ -568,6 +603,18 @@ def enseignant_modifier(request, pk):
 
 
 @cd_requis
+@require_POST
+def enseignant_basculer_statut(request, pk):
+    enseignant = get_object_or_404(Utilisateur, pk=pk, role=Utilisateur.Role.ENSEIGNANT)
+    enseignant.is_active = not enseignant.is_active
+    enseignant.save(update_fields=["is_active"])
+
+    statut = "activé" if enseignant.is_active else "désactivé"
+    messages.success(request, f"Enseignant {enseignant.nom} {enseignant.prenom} {statut}.")
+    return _redirect_apres_action(request, "enseignant_liste")
+
+
+@cd_requis
 def enseignant_supprimer(request, pk):
     return _utilisateur_supprimer(
         request,
@@ -582,7 +629,12 @@ def enseignant_supprimer(request, pk):
 @cd_requis
 def ue_liste(request):
     ues = UE.objects.prefetch_related("cours").all()
-    return render(request, "emploi_du_temps/ressources/ues/liste.html", {"ues": ues})
+    page_obj, pagination_query = _paginer_ressources(request, ues)
+    return render(request, "emploi_du_temps/ressources/ues/liste.html", {
+        "ues": page_obj.object_list,
+        "page_obj": page_obj,
+        "pagination_query": pagination_query,
+    })
 
 
 @cd_requis
@@ -632,7 +684,12 @@ def ue_supprimer(request, pk):
 @cd_requis
 def cours_liste(request):
     cours = Cours.objects.select_related("ue", "option").all()
-    return render(request, "emploi_du_temps/ressources/cours/liste.html", {"cours": cours})
+    page_obj, pagination_query = _paginer_ressources(request, cours)
+    return render(request, "emploi_du_temps/ressources/cours/liste.html", {
+        "cours": page_obj.object_list,
+        "page_obj": page_obj,
+        "pagination_query": pagination_query,
+    })
 
 @cd_requis
 def cours_creer(request):
@@ -679,6 +736,19 @@ def cours_modifier(request, pk):
             return redirect("cours_liste")
     return render(request, "emploi_du_temps/ressources/cours/form.html", {"action": "Modifier", "cours": cours, "options": options, "ues": ues})
 
+
+@cd_requis
+@require_POST
+def cours_basculer_statut(request, pk):
+    cours = get_object_or_404(Cours, pk=pk)
+    cours.status = not cours.status
+    cours.save(update_fields=["status"])
+
+    statut = "activé" if cours.status else "désactivé"
+    messages.success(request, f"Cours {cours.intitule} {statut}.")
+    return _redirect_apres_action(request, "cours_liste")
+
+
 @cd_requis
 def cours_supprimer(request, pk):
     cours = get_object_or_404(Cours, pk=pk)
@@ -695,7 +765,12 @@ def cours_supprimer(request, pk):
 @cd_requis
 def salle_liste(request):
     salles = Salle.objects.all()
-    return render(request, "emploi_du_temps/ressources/salles/liste.html", {"salles": salles})
+    page_obj, pagination_query = _paginer_ressources(request, salles)
+    return render(request, "emploi_du_temps/ressources/salles/liste.html", {
+        "salles": page_obj.object_list,
+        "page_obj": page_obj,
+        "pagination_query": pagination_query,
+    })
 
 @cd_requis
 def salle_creer(request):
@@ -739,7 +814,12 @@ def salle_supprimer(request, pk):
 @cd_requis
 def option_liste(request):
     options = Option.objects.all()
-    return render(request, "emploi_du_temps/ressources/options/liste.html", {"options": options})
+    page_obj, pagination_query = _paginer_ressources(request, options)
+    return render(request, "emploi_du_temps/ressources/options/liste.html", {
+        "options": page_obj.object_list,
+        "page_obj": page_obj,
+        "pagination_query": pagination_query,
+    })
 
 @cd_requis
 def option_creer(request):

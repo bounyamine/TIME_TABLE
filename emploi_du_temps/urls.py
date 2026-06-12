@@ -25,6 +25,7 @@ urlpatterns = [
     path("enseignants/", views.enseignant_liste, name="enseignant_liste"),
     path("enseignants/nouveau/", views.enseignant_creer, name="enseignant_creer"),
     path("enseignants/<int:pk>/modifier/", views.enseignant_modifier, name="enseignant_modifier"),
+    path("enseignants/<int:pk>/statut/", views.enseignant_basculer_statut, name="enseignant_basculer_statut"),
     path("enseignants/<int:pk>/supprimer/", views.enseignant_supprimer, name="enseignant_supprimer"),
 
     path("ues/", views.ue_liste, name="ue_liste"),
@@ -35,6 +36,7 @@ urlpatterns = [
     path("cours/", views.cours_liste, name="cours_liste"),
     path("cours/nouveau/", views.cours_creer, name="cours_creer"),
     path("cours/<str:pk>/modifier/", views.cours_modifier, name="cours_modifier"),
+    path("cours/<str:pk>/statut/", views.cours_basculer_statut, name="cours_basculer_statut"),
     path("cours/<str:pk>/supprimer/", views.cours_supprimer, name="cours_supprimer"),
 
     path("salles/", views.salle_liste, name="salle_liste"),

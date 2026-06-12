@@ -11,7 +11,7 @@ from emploi_du_temps.models import Option, UE, Cours, Salle, Utilisateur
 # ─────────────────────────────────────────────
 
 options_data = [
-    {"nom": "Sécurité Informatique",             "niveau": 4},  # SEC
+    {"nom": "Sécurité et Cryptographie",          "niveau": 4},  # SEC
     {"nom": "Réseaux et Télécommunications",      "niveau": 4},  # RTE
     {"nom": "Data Science",                       "niveau": 4},  # DSC
     {"nom": "Génie Logiciel",                     "niveau": 4},  # GLO
@@ -63,67 +63,70 @@ for s in salles_data:
 
 VH_STD  = "CM:30h, TD:20h, TP:30h, TPE:10h"
 
-# Format : (codeUE, intituleUE, option, volumeHoraire, intitule_cours)
+# Format : (codeUE, intituleUE, option, volumeHoraire, intitule_cours, status)
 # Chaque UE peut avoir 1 ou 2 cours maximum
 ue_cours_data = [
 
     # ── ITE niveau 3 commun ───────────────────────────────────────────
-    ("ITE345", "Réseaux Locaux et Interconnexion",       ITE, VH_STD,  "Réseaux Locaux et Interconnexion"),
-    ("ITE345", "Logiques et Électronique Programmable",  ITE, VH_STD,  "Logiques et Électronique Programmable"),
-    ("ITE325", "Architecture des Ordinateurs et SI",     ITE, VH_STD,  "Architecture des Ordinateurs et SI"),
-    ("ITE355", "Logique Formelle",                       ITE, VH_STD,  "Logique Formelle"),
-    ("ITE315", "Programmation Orientée Objet",           ITE, VH_STD,  "Programmation Orientée Objet"),
+    ("ITE345", "Réseaux Locaux et Interconnexion",       ITE, VH_STD,  "Réseaux Locaux et Interconnexion", True),
+    ("ITE345", "Logiques et Électronique Programmable",  ITE, VH_STD,  "Logiques et Électronique Programmable", True),
+    ("ITE325", "Architecture des Ordinateurs et SI",     ITE, VH_STD,  "Architecture des Ordinateurs et SI", True),
+    ("ITE355", "Logique Formelle",                       ITE, VH_STD,  "Logique Formelle", True),
+    ("ITE315", "Programmation Orientée Objet",           ITE, VH_STD,  "Programmation Orientée Objet", True),
 
     # ── GLO Génie Logiciel ────────────────────────────────────────────
-    ("GLO346", "Modélisation Informatique",              GLO, VH_STD,  "Modélisation Informatique"),
-    ("GLO417", "IOT — Présentation des Projets",         GLO, VH_STD,  "IOT (Présentation des Projets)"),
-    ("GLO418", "Développement Web",                      GLO, VH_STD,  "Développement Web"),
-    ("GLO418", "Développement d'Applications Mobiles",   GLO, VH_STD,  "Développement d'Applications Mobiles"),
-    ("GLO428", "Administration Base de Données",         GLO, VH_STD,  "Administration Base de Données"),
+    ("GLO346", "Modélisation Informatique",              GLO, VH_STD,  "Modélisation Informatique", True),
+    ("GLO417", "IOT — Présentation des Projets",         GLO, VH_STD,  "IOT (Présentation des Projets)", True),
+    ("GLO418", "Développement Web",                      GLO, VH_STD,  "Développement Web", True),
+    ("GLO418", "Développement d'Applications Mobiles",   GLO, VH_STD,  "Développement d'Applications Mobiles", True),
+    ("GLO428", "Administration Base de Données",         GLO, VH_STD,  "Administration Base de Données", True),
 
     # ── SEC Sécurité Informatique ─────────────────────────────────────
-    ("SEC346",  "Spécialisation en Cryptographie",                         SEC, VH_STD,  "Spécialisation en Cryptographie"),
-    ("SEC428",  "Logique Théorie des Modèles",                             SEC, VH_STD,  "Logique Théorie des Modèles"),
-    ("SEC438",  "Cryptographie et Codes Correcteurs 1",                    SEC, VH_STD,  "Spécialisation en Cryptographie et Codes Correcteurs 1"),
+    ("SEC346",  "Spécialisation en Cryptographie",                         SEC, VH_STD,  "Spécialisation en Cryptographie", True),
+    ("SEC428",  "Logique Théorie des Modèles",                             SEC, VH_STD,  "Logique Théorie des Modèles", True),
+    ("SEC438",  "Cryptographie et Codes Correcteurs 1",                    SEC, VH_STD,  "Spécialisation en Cryptographie et Codes Correcteurs 1", True),
 
     # ── DSC Data Science ──────────────────────────────────────────────
-    ("DSC356",  "Ingénierie des Connaissances",                            DSC, VH_STD,  "Ingénierie des Connaissances"),
-    ("DSC356", "Ingénierie des Données",                                   DSC, VH_STD,  "Ingénierie des Données"),
-    ("DSC418",  "Technique de Veille",                                     DSC, VH_STD,  "Technique de Veille"),
-    ("DSC428",  "Analyse Exploratoire des Données et Régression",          DSC, VH_STD,  "Analyse Exploratoire des Données et Régression"),
-    ("DSC447",  "IOT — Présentation des Projets DSC",                      DSC, VH_STD,  "IOT (Présentation des Projets) — DSC"),
+    ("DSC356",  "Ingénierie des Connaissances",                            DSC, VH_STD,  "Ingénierie des Connaissances", True),
+    ("DSC356", "Ingénierie des Données",                                   DSC, VH_STD,  "Ingénierie des Données", True),
+    ("DSC418",  "Technique de Veille",                                     DSC, VH_STD,  "Technique de Veille", True),
+    ("DSC428",  "Analyse Exploratoire des Données et Régression",          DSC, VH_STD,  "Analyse Exploratoire des Données et Régression", True),
+    ("DSC447",  "IOT — Présentation des Projets DSC",                      DSC, VH_STD,  "IOT (Présentation des Projets) — DSC", True),
 
     # ── RTE Réseaux et Télécommunications ─────────────────────────────
-    ("RTE346",  "Antenne, Propagation des Ondes et Hyperfréquence",        RTE, VH_STD,  "Antenne, Propagation des Ondes et Hyperfréquence"),
-    ("RTE418",  "Circuit Micro-Onde",                                      RTE, VH_STD,  "Circuit Micro-Onde"),
-    ("RTE437",  "IOT — Présentation des Projets RTE",                      RTE, VH_STD,  "IOT (Présentation des Projets) — RTE"),
+    ("RTE346",  "Antenne, Propagation des Ondes et Hyperfréquence",        RTE, VH_STD,  "Antenne, Propagation des Ondes et Hyperfréquence", True),
+    ("RTE418",  "Circuit Micro-Onde",                                      RTE, VH_STD,  "Circuit Micro-Onde", True),
+    ("RTE437",  "IOT — Présentation des Projets RTE",                      RTE, VH_STD,  "IOT (Présentation des Projets) — RTE", True),
 
     # ── Cours niveau 4 commun ────────────────────────────────────────────
-    ("COM448",  "Mathématiques pour Ingénieur",                            SEC, VH_STD, "Mathématiques pour Ingénieur"),
-    ("COM458",  "Droits des TICs",                                         SEC, VH_STD,  "Droits des TICs"),
+    ("COM448",  "Mathématiques pour Ingénieur",                            SEC, VH_STD, "Mathématiques pour Ingénieur", True),
+    ("COM458",  "Droits des TICs",                                         SEC, VH_STD,  "Droits des TICs", True),
 ]
 
 print("\n=== Création des UE et Cours ===")
-for code_ue, intitule_ue, option, vh, intitule_cours in ue_cours_data:
+for code_ue, intitule_ue, option, vh, intitule_cours, status in ue_cours_data:
     # Créer l'UE
     ue, ue_created = UE.objects.get_or_create(
         codeUE=code_ue,
         defaults={"intituleUE": intitule_ue}
     )
 
-    # Créer le cours lié à cette UE
-    cours_qs = Cours.objects.filter(ue=ue, option=option)
+    # Créer le cours lié à cette UE. Le statut existant n'est pas modifié :
+    # un cours désactivé depuis l'interface doit le rester après un nouveau seed.
+    cours_qs = Cours.objects.filter(ue=ue, option=option, intitule=intitule_cours)
     if cours_qs.exists():
-        print(f"  [EXISTE] UE {code_ue} → cours déjà présent")
+        cours = cours_qs.first()
+        print(f"  [EXISTE] UE {code_ue} → cours '{cours.intitule}' ({'actif' if cours.status else 'inactif'})")
     else:
         cours = Cours(
             ue=ue,
             intitule=intitule_cours,
             volumeHoraire=vh,
             option=option,
+            status=status,
         )
         cours.save()
-        print(f"  {'[UE CRÉÉE]' if ue_created else '[UE EXISTE]'} {code_ue} → cours '{intitule_cours}' créé")
+        print(f"  {'[UE CRÉÉE]' if ue_created else '[UE EXISTE]'} {code_ue} → cours '{intitule_cours}' créé ({'actif' if status else 'inactif'})")
 
 
 # ─────────────────────────────────────────────
@@ -176,7 +179,7 @@ print("\n" + "=" * 50)
 print(f"  Options     : {Option.objects.count()}")
 print(f"  Salles      : {Salle.objects.count()}")
 print(f"  UE          : {UE.objects.count()}")
-print(f"  Cours       : {Cours.objects.count()}")
+print(f"  Cours       : {Cours.objects.count()} ({Cours.objects.filter(status=True).count()} actifs)")
 print(f"  Enseignants : {Utilisateur.objects.filter(role='ENSEIGNANT').count()}")
 print("=" * 50)
 print("Seed terminé avec succès !")

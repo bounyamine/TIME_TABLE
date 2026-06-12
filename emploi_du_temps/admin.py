@@ -66,9 +66,9 @@ class UEAdmin(admin.ModelAdmin):
 
 @admin.register(Cours)
 class CoursAdmin(admin.ModelAdmin):
-    list_display = ("codeCours", "ue", "intitule", "volumeHoraire", "option")
+    list_display = ("codeCours", "ue", "intitule", "volumeHoraire", "option", "status")
     search_fields = ("codeCours", "intitule", "ue__intituleUE")
-    list_filter = ("ue", "option")
+    list_filter = ("ue", "option", "status")
 
 
 @admin.register(Salle)

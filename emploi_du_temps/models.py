@@ -119,6 +119,7 @@ class Cours(models.Model):
     codeCours = models.CharField("code du cours", max_length=30, editable=False)
     intitule = models.CharField("intitulé du cours", max_length=200)
     volumeHoraire = models.CharField("volume horaire", max_length=100, blank=True)
+    status = models.BooleanField("actif", default=True)
     option = models.ForeignKey(
         Option,
         on_delete=models.PROTECT,

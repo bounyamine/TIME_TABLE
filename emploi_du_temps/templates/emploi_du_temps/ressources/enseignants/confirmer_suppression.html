@@ -1,25 +1,24 @@
 {% extends "base.html" %}
-{% block titre %}Supprimer enseignant — EDT ENSPM{% endblock %}
+{% block titre %}Supprimer Enseignant — EDT ENSPM{% endblock %}
 {% block contenu %}
-
-<div class="confirm-card">
-  <div class="confirm-head">
-    <div class="confirm-ico-wrap"><i class="ti ti-alert-triangle"></i></div>
-    <h2 class="confirm-title">Confirmer la suppression</h2>
-    <p class="confirm-text">
-      Voulez-vous vraiment supprimer l'enseignant
-      <strong>{{ enseignant.nom }} {{ enseignant.prenom }}</strong> ?
-      Cette action est <strong>irréversible</strong>.
-    </p>
+<div class="page-header">
+  <div class="page-header-left">
+    <div class="page-icon"><i class="ti ti-alert-triangle"></i></div>
+    <div>
+      <h1 class="page-title">Supprimer un enseignant</h1>
+      <p class="page-sub">Cette action est définitive.</p>
+    </div>
   </div>
-  <div class="confirm-foot">
+</div>
+<div class="card" style="padding:24px;">
+  <p>
+    Voulez-vous vraiment supprimer l'enseignant
+    <strong>{{ enseignant.nom }} {{ enseignant.prenom }}</strong> ?
+  </p>
+  <form method="post" class="form-actions">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger-soft"><i class="ti ti-trash"></i> Supprimer</button>
     <a href="{% url 'enseignant_liste' %}" class="btn btn-secondary">Annuler</a>
-    <form method="post" style="display:inline">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-danger-soft">
-        <i class="ti ti-trash"></i> Oui, supprimer
-      </button>
-    </form>
-  </div>
+  </form>
 </div>
 {% endblock %}
