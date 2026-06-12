@@ -40,6 +40,7 @@ class UtilisateurRoleCreationForm(forms.ModelForm):
     def __init__(self, *args, role: str, **kwargs):
         super().__init__(*args, **kwargs)
         self.role = role
+        self.instance.role = role
         self.fields["option"].queryset = Option.objects.all()
         self.fields["option"].required = role == Utilisateur.Role.ETUDIANT
         if role != Utilisateur.Role.ETUDIANT:

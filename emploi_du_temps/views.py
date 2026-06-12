@@ -626,6 +626,65 @@ def enseignant_supprimer(request, pk):
         "enseignant",
     )
 
+
+@cd_requis
+def etudiant_liste(request):
+    return _utilisateur_liste(
+        request,
+        Utilisateur.Role.ETUDIANT,
+        "emploi_du_temps/ressources/etudiants/liste.html",
+        "etudiants",
+    )
+
+
+@cd_requis
+def etudiant_creer(request):
+    return _utilisateur_creer(
+        request,
+        Utilisateur.Role.ETUDIANT,
+        "emploi_du_temps/ressources/etudiants/form.html",
+        "etudiant_liste",
+        "Étudiant",
+    )
+
+
+@cd_requis
+def etudiant_modifier(request, pk):
+    return _utilisateur_modifier(
+        request,
+        pk,
+        Utilisateur.Role.ETUDIANT,
+        "emploi_du_temps/ressources/etudiants/form.html",
+        "etudiant_liste",
+        "Étudiant",
+    )
+
+
+@cd_requis
+@require_POST
+def etudiant_basculer_statut(request, pk):
+    etudiant = get_object_or_404(Utilisateur, pk=pk, role=Utilisateur.Role.ETUDIANT)
+    etudiant.is_active = not etudiant.is_active
+    etudiant.save(update_fields=["is_active"])
+
+    statut = "activé" if etudiant.is_active else "désactivé"
+    messages.success(request, f"Étudiant {etudiant.nom} {etudiant.prenom} {statut}.")
+    return _redirect_apres_action(request, "etudiant_liste")
+
+
+@cd_requis
+def etudiant_supprimer(request, pk):
+    return _utilisateur_supprimer(
+        request,
+        pk,
+        Utilisateur.Role.ETUDIANT,
+        "emploi_du_temps/ressources/etudiants/confirmer_suppression.html",
+        "etudiant_liste",
+        "Étudiant",
+        "etudiant",
+    )
+
+
 @cd_requis
 def ue_liste(request):
     ues = UE.objects.prefetch_related("cours").all()

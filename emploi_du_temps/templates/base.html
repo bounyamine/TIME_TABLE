@@ -536,6 +536,9 @@ document.addEventListener('DOMContentLoaded', function () {
     <a href="{% url 'enseignant_liste' %}" class="nav-link {% if 'enseignant' in request.resolver_match.url_name %}active{% endif %}">
       <i class="ti ti-users" aria-hidden="true"></i> Enseignants
     </a>
+    <a href="{% url 'etudiant_liste' %}" class="nav-link {% if 'etudiant' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="ti ti-school" aria-hidden="true"></i> Étudiants
+    </a>
     <a href="{% url 'ue_liste' %}" class="nav-link {% if 'ue' in request.resolver_match.url_name %}active{% endif %}">
       <i class="ti ti-components" aria-hidden="true"></i> UE
     </a>
