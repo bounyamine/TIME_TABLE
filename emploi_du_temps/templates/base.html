@@ -589,6 +589,50 @@ tbody td{padding:13px 18px;color:var(--gray-700);vertical-align:middle}
   .page-title{font-size:18px}
   .table-wrap{margin:0 -1px}
   .td-actions{min-width:160px}
+  .resource-table{font-size:12px}
+  .resource-table thead th,
+  .resource-table tbody td{padding:11px 10px}
+  .resource-table .td-actions{
+    min-width:0;
+    justify-content:flex-end;
+    flex-wrap:nowrap;
+  }
+  .resource-table .icon-action{
+    width:30px;
+    height:30px;
+    border-radius:8px;
+  }
+  .resource-table .badge{
+    max-width:150px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .resource-table .status-switch{
+    min-width:40px;
+    padding:4px;
+  }
+  .resource-table .status-switch>span:last-child{display:none}
+  .resource-table-enseignants th:nth-child(2),
+  .resource-table-enseignants td:nth-child(2),
+  .resource-table-enseignants th:nth-child(3),
+  .resource-table-enseignants td:nth-child(3),
+  .resource-table-etudiants th:nth-child(2),
+  .resource-table-etudiants td:nth-child(2),
+  .resource-table-etudiants th:nth-child(3),
+  .resource-table-etudiants td:nth-child(3),
+  .resource-table-etudiants th:nth-child(5),
+  .resource-table-etudiants td:nth-child(5),
+  .resource-table-cours th:nth-child(3),
+  .resource-table-cours td:nth-child(3),
+  .resource-table-cours th:nth-child(4),
+  .resource-table-cours td:nth-child(4),
+  .resource-table-salles th:nth-child(2),
+  .resource-table-salles td:nth-child(2),
+  .resource-table-options th:nth-child(3),
+  .resource-table-options td:nth-child(3){
+    display:none;
+  }
   .pagination-bar{align-items:flex-start}
   .pagination-actions{width:100%}
   .hero-copy,.login-form-panel,.login-visual{padding:28px}

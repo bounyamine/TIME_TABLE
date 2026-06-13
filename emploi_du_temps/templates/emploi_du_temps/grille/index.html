@@ -34,21 +34,19 @@
       {% with nb_brouillons=0 nb_publies=0 %}
       {% for emp in emplois_semaine %}
         {% if emp.statut == 'BROUILLON' %}
-        <form method="post" action="{% url 'publier_semaine' %}" style="display:inline;">
+        <form method="post" action="{% url 'publier_semaine' %}" style="display:inline;" data-publish-form="publish">
           {% csrf_token %}
           <input type="hidden" name="semaine" value="{{ semaine|date:'Y-m-d' }}">
-          <button type="submit" class="btn btn-success"
-                  onclick="return confirm('Publier tous les emplois brouillons de cette semaine ?')">
+          <button type="submit" class="btn btn-success">
             <i class="ti ti-send"></i> Publier
           </button>
         </form>
         {% endif %}
         {% if emp.statut == 'PUBLIE' %}
-        <form method="post" action="{% url 'depublier_semaine' %}" style="display:inline;">
+        <form method="post" action="{% url 'depublier_semaine' %}" style="display:inline;" data-publish-form="draft">
           {% csrf_token %}
           <input type="hidden" name="semaine" value="{{ semaine|date:'Y-m-d' }}">
-          <button type="submit" class="btn btn-outline"
-                  onclick="return confirm('Repasser en brouillon ?')">
+          <button type="submit" class="btn btn-outline">
             <i class="ti ti-rotate-clockwise"></i> Brouillon
           </button>
         </form>
@@ -134,9 +132,6 @@
   <button type="button" class="edt-tool-btn danger" id="edtToolDelete" disabled title="Suppr">
     <i class="ti ti-trash"></i> <span class="edt-tool-label">Supprimer</span>
   </button>
-  <span class="edt-save-indicator" id="edtSaveIndicator">
-    <i class="ti ti-circle-check"></i> Prêt
-  </span>
 </div>
 {% endif %}
 </div>
@@ -323,6 +318,31 @@
     </div>
   </div>
 </div>
+
+<div class="edt-modal" id="edtPublishModal" aria-hidden="true">
+  <div class="edt-modal-backdrop" data-publish-close></div>
+  <div class="edt-modal-panel edt-confirm-panel" role="dialog" aria-modal="true" aria-labelledby="edtPublishTitle">
+    <div class="edt-modal-head">
+      <div>
+        <h2 id="edtPublishTitle">Confirmer l'action</h2>
+        <p id="edtPublishSubtitle">Semaine du {{ semaine|date:"d/m/Y" }}</p>
+      </div>
+      <button type="button" class="edt-modal-close" data-publish-close aria-label="Fermer">
+        <i class="ti ti-x"></i>
+      </button>
+    </div>
+    <div class="edt-confirm-body">
+      <div class="edt-confirm-icon edt-publish-icon" id="edtPublishIcon"><i class="ti ti-send"></i></div>
+      <p id="edtPublishText">Confirmer cette action sur l'emploi du temps ?</p>
+    </div>
+    <div class="edt-modal-actions edt-confirm-actions">
+      <button type="button" class="btn btn-secondary" data-publish-close>Annuler</button>
+      <button type="button" class="btn btn-success" id="edtPublishConfirm">
+        <i class="ti ti-send"></i> Confirmer
+      </button>
+    </div>
+  </div>
+</div>
 {% endif %}
 
 <!-- Légende statuts -->
@@ -448,6 +468,8 @@
   display:flex;align-items:center;justify-content:center;flex-shrink:0;
 }
 .edt-confirm-icon i{font-size:22px}
+.edt-publish-icon{background:var(--green-light);color:var(--green-dark)}
+.edt-publish-icon.is-draft{background:var(--orange-light);color:var(--orange)}
 .edt-confirm-body p{margin:0;color:var(--gray-700);font-size:13.5px;line-height:1.6}
 .edt-confirm-actions{padding:16px 22px;background:var(--gray-50)}
 /* Badges statut */
@@ -653,8 +675,14 @@ document.head.appendChild(style);
   const deleteModal = document.getElementById('edtDeleteModal');
   const deleteConfirm = document.getElementById('edtDeleteConfirm');
   const deleteText = document.getElementById('edtDeleteText');
+  const publishModal = document.getElementById('edtPublishModal');
+  const publishTitle = document.getElementById('edtPublishTitle');
+  const publishText = document.getElementById('edtPublishText');
+  const publishIcon = document.getElementById('edtPublishIcon');
+  const publishConfirm = document.getElementById('edtPublishConfirm');
   const toolbarAdd = document.getElementById('edtToolbarAdd');
   const saveIndicator = document.getElementById('edtSaveIndicator');
+  let pendingPublishForm = null;
   const tools = {
     edit: document.getElementById('edtToolEdit'),
     copy: document.getElementById('edtToolCopy'),
@@ -744,6 +772,56 @@ document.head.appendChild(style);
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => toast.remove(), action ? 7000 : 2800);
   }
+
+  function openPublishModal(form) {
+    if (!publishModal || !publishTitle || !publishText || !publishConfirm) return true;
+    const mode = form.dataset.publishForm;
+    pendingPublishForm = form;
+    publishIcon?.classList.toggle('is-draft', mode === 'draft');
+
+    if (mode === 'draft') {
+      publishTitle.textContent = 'Repasser en brouillon ?';
+      publishText.textContent = "Les enseignants et étudiants ne verront plus cette semaine comme version publiée. Vous pourrez la republier après modification.";
+      publishIcon.innerHTML = '<i class="ti ti-rotate-clockwise"></i>';
+      publishConfirm.className = 'btn btn-outline';
+      publishConfirm.innerHTML = '<i class="ti ti-rotate-clockwise"></i> Repasser en brouillon';
+    } else {
+      publishTitle.textContent = 'Publier cette semaine ?';
+      publishText.textContent = "Les emplois du temps brouillons de cette semaine deviendront visibles pour les enseignants et les étudiants concernés.";
+      publishIcon.innerHTML = '<i class="ti ti-send"></i>';
+      publishConfirm.className = 'btn btn-success';
+      publishConfirm.innerHTML = '<i class="ti ti-send"></i> Publier';
+    }
+
+    publishModal.classList.add('show');
+    publishModal.setAttribute('aria-hidden', 'false');
+    publishConfirm.focus();
+    return false;
+  }
+
+  function closePublishModal() {
+    publishModal?.classList.remove('show');
+    publishModal?.setAttribute('aria-hidden', 'true');
+    pendingPublishForm = null;
+  }
+
+  document.querySelectorAll('[data-publish-form]').forEach(form => {
+    form.addEventListener('submit', event => {
+      if (form.dataset.confirmed === '1') return;
+      event.preventDefault();
+      openPublishModal(form);
+    });
+  });
+
+  publishConfirm?.addEventListener('click', () => {
+    if (!pendingPublishForm) return;
+    pendingPublishForm.dataset.confirmed = '1';
+    pendingPublishForm.submit();
+  });
+
+  document.querySelectorAll('[data-publish-close]').forEach(button => {
+    button.addEventListener('click', closePublishModal);
+  });
 
   function updateToolbar() {
     const hasCard = Boolean(selectedCard);
