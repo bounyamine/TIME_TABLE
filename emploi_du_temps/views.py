@@ -104,11 +104,15 @@ def deconnexion(request: HttpRequest) -> HttpResponse:
 
 
 # ─────────────────────────────────────────────
-#  GRILLE EDT PAR SEMAINE (style PHP)
+#  GRILLE EDT PAR SEMAINE
 # ─────────────────────────────────────────────
 
 def _get_lundi(semaine_str: str | None) -> date:
-    """Retourne le lundi de la semaine donnée ou de la semaine courante."""
+    """Retourne le lundi demandé, ou la semaine à préparer par défaut.
+
+    Le dimanche, la grille ouvre déjà la semaine suivante pour permettre au CD
+    de préparer et publier l'emploi du temps avant le lundi matin.
+    """
     if semaine_str:
         try:
             d = date.fromisoformat(semaine_str)
@@ -116,12 +120,14 @@ def _get_lundi(semaine_str: str | None) -> date:
         except ValueError:
             pass
     today = date.today()
+    if today.weekday() == 6:
+        return today + timedelta(days=1)
     return today - timedelta(days=today.weekday())
 
 
 @login_required
 def grille_edt(request: HttpRequest, semaine: str | None = None) -> HttpResponse:
-    """Grille EDT par semaine — vue principale (équivalent PHP /edt)."""
+    """Grille EDT par semaine — vue principale."""
     semaine_date = _get_lundi(semaine or request.GET.get("semaine"))
     salles = Salle.objects.all()
     salle_id_param = request.GET.get("salle_id", "")
@@ -381,7 +387,7 @@ def depublier_semaine(request: HttpRequest) -> HttpResponse:
 
 @cd_requis
 def ajax_conflits(request: HttpRequest) -> JsonResponse:
-    """Vérification AJAX des conflits (équivalent PHP /edt/check-conflicts)."""
+    """Vérification AJAX des conflits."""
     if request.method != "POST":
         return JsonResponse({"conflits": [], "count": 0})
 
@@ -462,7 +468,7 @@ def ajax_conflits(request: HttpRequest) -> JsonResponse:
 
 @login_required
 def ajax_cours_par_option(request: HttpRequest, option_id: int) -> JsonResponse:
-    """Retourne les cours d'une option (équivalent PHP /edt/cours-par-filiere)."""
+    """Retourne les cours d'une option."""
     cours = list(
         Cours.objects.filter(Q(option_id=option_id) | Q(options__id=option_id), status=True).distinct().values(
             "id",
