@@ -121,6 +121,25 @@ ENSEIGNANTS = [
 ]
 
 
+ETUDIANTS = [
+    {"username": "glo.ngono", "nom": "Ngono", "prenom": "Patrick", "email": "patrick.ngono@enspm.cm", "option": "GLO"},
+    {"username": "glo.mballa", "nom": "Mballa", "prenom": "Ariane", "email": "ariane.mballa@enspm.cm", "option": "GLO"},
+    {"username": "glo.essomba", "nom": "Essomba", "prenom": "Joël", "email": "joel.essomba@enspm.cm", "option": "GLO"},
+    {"username": "rte.abate", "nom": "Abate", "prenom": "Kevin", "email": "kevin.abate@enspm.cm", "option": "RTE"},
+    {"username": "rte.zra", "nom": "Zra", "prenom": "Nadine", "email": "nadine.zra@enspm.cm", "option": "RTE"},
+    {"username": "rte.hamadou", "nom": "Hamadou", "prenom": "Ibrahim", "email": "ibrahim.hamadou@enspm.cm", "option": "RTE"},
+    {"username": "sec.manga", "nom": "Manga", "prenom": "Esther", "email": "esther.manga@enspm.cm", "option": "SEC"},
+    {"username": "sec.biloa", "nom": "Biloa", "prenom": "Junior", "email": "junior.biloa@enspm.cm", "option": "SEC"},
+    {"username": "sec.ndongo", "nom": "Ndongo", "prenom": "Clarisse", "email": "clarisse.ndongo@enspm.cm", "option": "SEC"},
+    {"username": "dsc.talla", "nom": "Talla", "prenom": "Grâce", "email": "grace.talla@enspm.cm", "option": "DSC"},
+    {"username": "dsc.kamga", "nom": "Kamga", "prenom": "Loïc", "email": "loic.kamga@enspm.cm", "option": "DSC"},
+    {"username": "dsc.fotso", "nom": "Fotso", "prenom": "Mireille", "email": "mireille.fotso@enspm.cm", "option": "DSC"},
+    {"username": "ite.belinga", "nom": "Belinga", "prenom": "Marc", "email": "marc.belinga@enspm.cm", "option": "ITE"},
+    {"username": "ite.ngassa", "nom": "Ngassa", "prenom": "Sylvie", "email": "sylvie.ngassa@enspm.cm", "option": "ITE"},
+    {"username": "ite.oumarou", "nom": "Oumarou", "prenom": "Said", "email": "said.oumarou@enspm.cm", "option": "ITE"},
+]
+
+
 CRENEAUX = [
     # Labo INFOTEL
     {"salle": ("Campus de Sékandé", "Labo INFOTEL"), "jour": Creneau.Jour.MARDI, "debut": "07:30", "fin": "09:30", "cours": ("GLO418", "Développement d'Applications Mobiles"), "enseignant": "touza"},
@@ -271,6 +290,42 @@ def seed_enseignants():
     return created_teachers
 
 
+def seed_etudiants(options):
+    print("\n=== Étudiants ===")
+    created_students = {}
+    for data in ETUDIANTS:
+        option = options[data["option"]]
+        user, created = Utilisateur.objects.get_or_create(
+            username=data["username"],
+            defaults={
+                "email": data["email"],
+                "nom": data["nom"],
+                "prenom": data["prenom"],
+                "role": Utilisateur.Role.ETUDIANT,
+                "option": option,
+            },
+        )
+        changed = False
+        for field in ("email", "nom", "prenom"):
+            if getattr(user, field) != data[field]:
+                setattr(user, field, data[field])
+                changed = True
+        if user.role != Utilisateur.Role.ETUDIANT:
+            user.role = Utilisateur.Role.ETUDIANT
+            changed = True
+        if user.option_id != option.pk:
+            user.option = option
+            changed = True
+        if created:
+            user.set_password(PASSWORD)
+            changed = True
+        if changed:
+            user.save()
+        created_students[user.username] = user
+        print(f"  {'[CRÉÉ]  ' if created else '[OK]    '} {user.username} ({data['option']})")
+    return created_students
+
+
 def seed_cd():
     print("\n=== Chef de département de démonstration ===")
     cd_user, created = Utilisateur.objects.get_or_create(
@@ -329,6 +384,7 @@ def print_resume():
     print(f"  UE          : {UE.objects.count()}")
     print(f"  Cours       : {Cours.objects.count()} ({Cours.objects.filter(status=True).count()} actifs)")
     print(f"  Enseignants : {Utilisateur.objects.filter(role=Utilisateur.Role.ENSEIGNANT).count()}")
+    print(f"  Étudiants   : {Utilisateur.objects.filter(role=Utilisateur.Role.ETUDIANT).count()}")
     print(f"  Créneaux    : {Creneau.objects.count()}")
     print("=" * 50)
     print("Seed terminé avec succès.")
@@ -339,6 +395,7 @@ options = seed_options()
 salles = seed_salles()
 courses = seed_cours(options)
 teachers = seed_enseignants()
+students = seed_etudiants(options)
 cd = seed_cd()
 seed_emploi_du_temps(courses, salles, teachers, cd)
 print_resume()
