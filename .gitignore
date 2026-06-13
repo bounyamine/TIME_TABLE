@@ -18,7 +18,7 @@ media/
 env/
 .venv/
 venv/
-emploi_du_temps/migrations/
+emploi_du_temps/migrations/__pycache__/
 
 # OS / IDE
 .DS_Store

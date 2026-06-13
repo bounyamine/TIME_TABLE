@@ -15,13 +15,14 @@ def enseignants_actifs_queryset():
 
 
 def cours_actifs_queryset():
-    return Cours.objects.select_related("ue", "option").filter(status=True)
+    return Cours.objects.select_related("ue", "option").prefetch_related("options").filter(status=True)
 
 
 class CoursModelChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         ue_label = obj.ue.intituleUE if getattr(obj, "ue", None) else "UE non renseignée"
-        return f"{obj.codeCours} — {obj.intitule} — UE : {ue_label} ({obj.option.nom})"
+        options_label = obj.options_affichage or obj.option.sigle
+        return f"{obj.codeCours} — {obj.intitule} — UE : {ue_label} ({options_label})"
 
 
 class UtilisateurRoleCreationForm(forms.ModelForm):
@@ -149,7 +150,7 @@ class CreneauForm(forms.ModelForm):
         self.emploi_du_temps = emploi_du_temps
         cours = cours_actifs_queryset()
         if self.instance and self.instance.cours_id:
-            cours = Cours.objects.select_related("ue", "option").filter(
+            cours = Cours.objects.select_related("ue", "option").prefetch_related("options").filter(
                 Q(status=True) | Q(pk=self.instance.cours_id)
             )
         self.fields["cours"].queryset = cours
@@ -184,7 +185,10 @@ class CreneauForm(forms.ModelForm):
             raise ValidationError("Cette salle est déjà occupée sur ce créneau.")
         if chevauchements.filter(enseignant=enseignant).exists():
             raise ValidationError("Cet enseignant est déjà affecté sur ce créneau.")
-        if chevauchements.filter(option=cours.option).exists():
+        option_ids = [option.pk for option in cours.options_effectives]
+        if chevauchements.filter(
+            Q(option_id__in=option_ids) | Q(options__in=option_ids)
+        ).distinct().exists():
             raise ValidationError("Cette option a déjà un cours sur ce créneau.")
         return cd
 
@@ -194,6 +198,7 @@ class CreneauForm(forms.ModelForm):
         creneau.option = creneau.cours.option
         if commit:
             creneau.save()
+            creneau.options.set(creneau.cours.options_effectives)
         return creneau
 
 
@@ -223,7 +228,7 @@ class CreneauDirectForm(forms.Form):
             field.widget.attrs.setdefault("class", "form-control")
         cours = cours_actifs_queryset()
         if instance and instance.cours_id:
-            cours = Cours.objects.select_related("ue", "option").filter(
+            cours = Cours.objects.select_related("ue", "option").prefetch_related("options").filter(
                 Q(status=True) | Q(pk=instance.cours_id)
             )
         self.fields["cours"].queryset = cours

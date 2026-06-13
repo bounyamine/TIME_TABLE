@@ -47,7 +47,9 @@ class Utilisateur(AbstractUser):
         if self.role == self.Role.ENSEIGNANT:
             return emplois.filter(creneaux__enseignant=self).distinct()
         if self.role == self.Role.ETUDIANT and self.option_id:
-            return emplois.filter(creneaux__option=self.option).distinct()
+            return emplois.filter(
+                Q(creneaux__option=self.option) | Q(creneaux__options=self.option)
+            ).distinct()
         return emplois
 
     def __str__(self) -> str:
@@ -97,6 +99,17 @@ class Option(models.Model):
     def __str__(self) -> str:
         return f"{self.nom} - niveau {self.niveau}"
 
+    @property
+    def sigle(self) -> str:
+        sigles = {
+            "Sécurité et Cryptographie": "SEC",
+            "Réseaux et Télécommunications": "RTE",
+            "Data Science": "DSC",
+            "Génie Logiciel": "GLO",
+            "Informatique et Télécommunications": "ITE",
+        }
+        return sigles.get(self.nom, self.nom)
+
 class UE(models.Model):
     codeUE = models.CharField("code UE", max_length=30, primary_key=True)
     intituleUE = models.CharField("intitulé UE", max_length=200)
@@ -124,7 +137,13 @@ class Cours(models.Model):
         Option,
         on_delete=models.PROTECT,
         related_name="cours",
-        verbose_name="option",
+        verbose_name="option principale",
+    )
+    options = models.ManyToManyField(
+        Option,
+        blank=True,
+        related_name="cours_partages",
+        verbose_name="options concernées",
     )
 
     class Meta:
@@ -153,6 +172,39 @@ class Cours(models.Model):
 
     def __str__(self) -> str:
         return f"{self.codeCours} - {self.intitule}"
+
+    @property
+    def code_affichage(self) -> str:
+        if self.codeCours.startswith("COM") and self.codeCours[3:].isdigit():
+            return self.codeCours[3:]
+        return self.codeCours
+
+    @property
+    def code_affichage_espace(self) -> str:
+        for prefixe in ("GLO", "RTE", "SEC", "DSC", "ITE", "COM"):
+            if self.codeCours.startswith(prefixe) and self.codeCours[len(prefixe):].isdigit():
+                if prefixe == "COM":
+                    return self.code_affichage
+                code = self.code_affichage
+                if code.isdigit():
+                    return f"{prefixe} {code}"
+                return f"{prefixe} {self.codeCours[len(prefixe):]}"
+        return self.code_affichage
+
+    @property
+    def options_effectives(self) -> list[Option]:
+        options = list(self.options.all()) if self.pk else []
+        if not options and self.option_id:
+            options = [self.option]
+        return options
+
+    @property
+    def options_affichage(self) -> str:
+        return ", ".join(option.sigle for option in self.options_effectives)
+
+    @property
+    def option_ids_csv(self) -> str:
+        return ",".join(str(option.pk) for option in self.options_effectives)
 
 
 class Salle(models.Model):
@@ -256,6 +308,33 @@ class Creneau(models.Model):
         related_name="creneaux",
         verbose_name="option",
     )
+    options = models.ManyToManyField(
+        Option,
+        blank=True,
+        related_name="creneaux_partages",
+        verbose_name="options concernées",
+    )
+
+    @property
+    def options_affichage(self) -> str:
+        options = list(self.options.all()) if self.pk else []
+        if not options and self.cours_id:
+            options = self.cours.options_effectives
+        if not options and self.option_id:
+            options = [self.option]
+        return ", ".join(option.sigle for option in options)
+
+    @property
+    def reference_affichage(self) -> str:
+        options = list(self.options.all()) if self.pk else []
+        if not options and self.cours_id:
+            options = self.cours.options_effectives
+        if not options and self.option_id:
+            options = [self.option]
+        if len(options) > 1:
+            sigles = ", ".join(option.sigle for option in options)
+            return f"{sigles}, ({self.cours.code_affichage})"
+        return self.cours.code_affichage_espace
     
     class Meta:
         ordering = ["jour", "heureDebut"]
@@ -296,8 +375,17 @@ class Creneau(models.Model):
             raise ValidationError("Cette salle est déjà occupée sur ce créneau.")
         if chevauchements.filter(enseignant=self.enseignant).exists():
             raise ValidationError("Cet enseignant est déjà affecté sur ce créneau.")
+        option_ids = []
+        if self.pk:
+            option_ids = list(self.options.values_list("pk", flat=True))
+        if not option_ids and self.cours_id:
+            option_ids = list(self.cours.options.values_list("pk", flat=True))
         option = self.option or getattr(self.cours, "option", None)
-        if option and chevauchements.filter(option=option).exists():
+        if not option_ids and option:
+            option_ids = [option.pk]
+        if option_ids and chevauchements.filter(
+            Q(option_id__in=option_ids) | Q(options__in=option_ids)
+        ).distinct().exists():
             raise ValidationError("Cette option a déjà un cours sur ce créneau.")
 
     def affecter(self) -> None:

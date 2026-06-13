@@ -3,302 +3,296 @@
 <head>
 <meta charset="UTF-8">
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
+@page { size: A4 landscape; margin: 0; }
+* { box-sizing: border-box; }
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 11px;
+  margin: 0;
   background: #fff;
   color: #000;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10px;
 }
 
 .page {
-  width: 100%;
-  padding: 6mm 8mm;
-  display: flex;
-  flex-direction: column;
+  width: 297mm;
+  min-height: 210mm;
+  padding: 5mm 8mm 7mm;
   page-break-after: always;
 }
 .page:last-child { page-break-after: avoid; }
 
-/* EN-TÊTE */
-.header { display: table; width: 100%; margin-bottom: 2mm; }
-.header-row { display: table-row; }
-.header-left, .header-center, .header-right {
+.institution-header {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+  margin-bottom: 2mm;
+}
+.head-col {
   display: table-cell;
-  vertical-align: top;
-  font-size: 7.5px;
-  font-weight: 700;
-  line-height: 1.5;
+  width: 36%;
   text-align: center;
+  vertical-align: top;
+  font-weight: 700;
+  font-size: 8.6px;
+  line-height: 1.24;
 }
-.header-left  { width: 33%; }
-.header-center{ width: 34%; }
-.header-right { width: 33%; }
+.head-center {
+  width: 28%;
+  padding-top: 1mm;
+}
+.head-col strong { font-weight: 900; }
+.head-col em { font-style: italic; font-weight: 700; }
+.dash { letter-spacing: .4px; }
 
-.logo-wrap {
-  display: block;
-  margin: 0 auto 1mm;
-}
 .logo-img {
   width: 20mm;
   height: 20mm;
-  border-radius: 50%;
-  border: 1px solid #fff;
+  object-fit: contain;
   display: block;
-  margin: 0 auto;
+  margin: 0 auto 1.2mm;
 }
-.logo-circle {
-  display: inline-block;
-  width: 20mm; height: 20mm;
+.logo-fallback {
+  width: 20mm;
+  height: 20mm;
+  margin: 0 auto 1.2mm;
+  border: .35mm solid #777;
   border-radius: 50%;
-  border: 1px solid #fff;
-  line-height: 20mm;
-  font-weight: 900; font-size: 9px;
-  color: #1a7a3a; text-align: center;
-  margin-bottom: 1mm;
-}
-
-.contact-center { font-size: 6.5px; line-height: 1.6; text-align: center; }
-.contact-center a { color: #005baa; text-decoration: underline; }
-
-/* Séparateurs verts */
-.sep-green { height: 2px; background: #70c341; margin: 1mm 0 0; }
-.sep-dark  { height: 1px; background: #009a50; margin: 0 0 1mm; }
-
-/* BOÎTE TITRE */
-.title-box {
-  border: 3px solid #7030a0;
-  border-radius: 6px;
+  color: #1f7a3a;
+  font-size: 8px;
+  font-weight: 900;
+  line-height: 17mm;
   text-align: center;
-  padding: 3mm 4mm;
-  margin: 1.5mm auto;
-  width: 62%;
 }
-.title-box .main-title {
-  font-size: 14px; font-weight: 900;
-  text-decoration: underline; letter-spacing: 1px;
+.contact {
+  font-size: 8px;
+  line-height: 1.25;
+  font-weight: 700;
 }
-.title-box .annee {
-  font-size: 12px; font-weight: 700; margin-top: 1mm; text-decoration: underline; 
-}
-.title-box .annee a { color: #005baa; text-decoration: underline; }
-.title-box .site-salle { font-size: 13px; font-weight: 700; margin-top: 1.5mm; }
-.title-box .salle-val  { color: #c00}
+.contact a { color: #008bd2; text-decoration: underline; }
 
-/* TABLEAU */
-table.edt {
+.green-line-light {
+  height: .7mm;
+  background: #92d050;
+  margin-top: 1.5mm;
+}
+.green-line-dark {
+  height: .35mm;
+  background: #00b050;
+  margin-top: .25mm;
+}
+
+.title-box {
+  width: 75%;
+  margin: 1.2mm auto 1mm;
+  padding: 2.2mm 4mm 2.4mm;
+  border: .9mm solid #7030a0;
+  border-radius: 4mm;
+  text-align: center;
+  font-weight: 900;
+}
+.main-title {
+  font-size: 15px;
+  text-decoration: underline;
+  margin-bottom: .9mm;
+}
+.sub-title {
+  font-size: 11.2px;
+  margin-bottom: .8mm;
+}
+.period {
+  color: #00a2e8;
+  text-decoration: underline;
+}
+.site-line {
+  font-size: 13px;
+}
+.site-label {
+  color: #000;
+}
+.room-label {
+  color: #f00;
+  padding-left: 28mm;
+}
+
+.edt {
   width: 100%;
-  border-collapse: collapse;
   table-layout: fixed;
-  margin-top: 2mm;
-  border: 3px solid #70c341;
-  flex: 1;
+  border-collapse: collapse;
+  border: .55mm solid #00b050;
+  margin-top: .8mm;
 }
-
-table.edt th {
-  border: 3px solid #70c341;
+.edt th,
+.edt td {
+  border: .45mm solid #00b050;
+}
+.edt th {
+  height: 10mm;
   text-align: center;
   vertical-align: middle;
-  font-size: 10px;
+  font-size: 8.6px;
   font-weight: 900;
   background: #fff;
-  padding: 3mm 1mm;
-  letter-spacing: 0.5px;
 }
-table.edt th.th-horaire { width: 22mm; }
-
-table.edt td {
-  border: 3px solid #70c341;
+.edt .horaire-head {
+  width: 20mm;
+}
+.horaire-cell {
+  width: 20mm;
+  height: 23.5mm;
   text-align: center;
   vertical-align: middle;
-  padding: 1.5mm 1mm;
-  height: 20mm;
-}
-
-table.edt td.horaire-cell {
-  font-size: 9px;
+  font-size: 8.6px;
   font-weight: 900;
-  background: #f5f5f5;
-  white-space: normal;
-  word-break: keep-all;
-  width: 22mm;
-  vertical-align: middle;
-  border: 3px solid #70c341;
-  line-height: 1.3;
+  white-space: nowrap;
+  background: #fff;
 }
-
-/* Contenu cellule — tout gras, centré, taille adaptative */
-table.edt td.day-cell {
-  vertical-align: middle;
+.day-cell {
+  height: 23.5mm;
+  padding: 1mm .8mm;
   text-align: center;
-  padding: 2mm 1.5mm;
+  vertical-align: middle;
+  overflow: hidden;
 }
-
 .cell-inner {
   display: block;
+  width: 100%;
   text-align: center;
+  line-height: 1.16;
+  font-weight: 900;
 }
-
 .cours-nom {
   display: block;
-  font-weight: 700;
-  font-size: 10px;
-  line-height: 1.4;
-  margin-bottom: 1px;
+  font-size: 9.5px;
+  margin-bottom: .2mm;
 }
 .cours-code {
   display: block;
-  font-weight: 700;
-  font-size: 10px;
-  margin-bottom: 1px;
+  font-size: 9.3px;
+  margin-bottom: .2mm;
 }
 .cours-volume {
   display: block;
-  font-weight: 700;
-  font-size: 9px;
-  color: #000;
-  margin-bottom: 1px;
+  font-size: 8.4px;
+  margin-bottom: .2mm;
 }
 .cours-enseignant {
   display: block;
-  font-weight: 700;
-  font-size: 10px;
-  color: #c00000;
+  color: #f00;
+  font-size: 9.2px;
+  font-weight: 900;
 }
 
-/* PAUSE */
-table.edt tr.pause-row td {
-  border-top: 3px solid #7030a0;
-  border-bottom: 3px solid #7030a0;
-  border-left: 3px solid #7030a0;
-  border-right: 3px solid #7030a0;
-  height: 11mm;
+.pause-row .horaire-cell {
+  height: 12mm;
+  background: #fff;
 }
-table.edt td.pause-label {
+.pause-full {
+  height: 12mm;
   background: #bdd7ee;
-  font-size: 9px; font-weight: 900;
-  vertical-align: middle;
-}
-table.edt td.pause-full {
-  background: #bdd7ee;
-  font-size: 20px; font-weight: 900;
-  letter-spacing: 5px;
-  vertical-align: middle;
   text-align: center;
+  vertical-align: middle;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: .8mm;
 }
 
-/* PIED DE PAGE */
 .footer {
-  margin-top: 2mm;
   display: table;
   width: 100%;
-  margin-bottom: 0;
   table-layout: fixed;
+  margin-top: 2mm;
 }
 .footer-note {
   display: table-cell;
-  width: 65%;
-  font-size: 7px;
-  font-weight: 700;
-  line-height: 1.2;
-  vertical-align: bottom;
-  padding-right: 4mm;
-  text-align: justify;
+  width: 78%;
+  font-size: 9px;
+  line-height: 1.25;
+  font-weight: 900;
+  text-align: left;
+  vertical-align: top;
+  padding-left: 1.5mm;
 }
 .footer-note a {
-  color: #005baa;
+  color: #0070c0;
   text-decoration: underline;
-  font-weight: 700;
 }
-.footer-directeur {
+.footer-director {
   display: table-cell;
-  text-align: right;
-  padding-right: 15px;
-  font-size: 10px;
-  font-weight: 700;
-  vertical-align: bottom;
-  white-space: nowrap;
-  width: 35%;
+  width: 22%;
+  text-align: center;
+  vertical-align: top;
+  font-size: 9px;
+  font-weight: 900;
 }
-
-@page { size: A4 landscape; margin: 0; }
 </style>
 </head>
 <body>
 
 {% for item in salles_lignes %}
-<div class="page">
-
-  <!-- EN-TÊTE -->
-  <div class="header">
-    <div class="header-row">
-
-      <div class="header-left">
-        <strong>République du Cameroun</strong><br>
-        <em>Paix-Travail-Patrie</em><br>
-        -------------<br>
-        Ministère de l'Enseignement Supérieur<br>
-        --------------<br>
-        <strong>UNIVERSITÉ DE MAROUA</strong><br>
-        --------------<br>
-        <strong>ECOLE NATIONALE SUPERIEURE POLYTECHNIQUE</strong><br>
-        ---------------<br>
-        Département d'Informatique et des Télécommunications
-      </div>
-
-      <div class="header-center">
-        {% if logo_path %}
-        <img src="file:///{{ logo_path }}" class="logo-img"><br>
-        {% else %}
-        <div class="logo-circle">ENSPM</div><br>
-        {% endif %}
-        <div class="contact-center">
-          B.P./P.O. Box : 46 Maroua<br>
-          Tel : (+237) 22 62 03 76 / (+237) 22 62 08 90<br>
-          Fax : (+237) 22 29 31 12 / (+237) 22 29 15 41<br>
-          Site web : <a href="#">http://www.enspm-univ-maroua.cm</a><br>
-          Email : <a href="#">polytech@univ-maroua.cm</a>
-        </div>
-      </div>
-
-      <div class="header-right">
-        <strong>Republic of Cameroon</strong><br>
-        <em>Peace-Work-Fatherland</em><br>
-        -------------<br>
-        Ministry of Higher Education<br>
-        -------------<br>
-        <strong>THE UNIVERSITY OF MAROUA</strong><br>
-        -------------<br>
-        <strong>NATIONAL ADVANCED SCHOOL OF ENGINEERING</strong><br>
-        ---------------<br>
-        Department of Computer Science and Telecommunications
-      </div>
-
+<section class="page">
+  <header class="institution-header">
+    <div class="head-col">
+      <strong>République du Cameroun</strong><br>
+      <em>Paix-Travail-Patrie</em><br>
+      <span class="dash">-------------</span><br>
+      Ministère de l'Enseignement Supérieur<br>
+      <span class="dash">--------------</span><br>
+      <strong>UNIVERSITÉ DE MAROUA</strong><br>
+      <span class="dash">--------------</span><br>
+      <strong>ECOLE NATIONALE SUPERIEURE POLYTECHNIQUE</strong><br>
+      <span class="dash">---------------</span><br>
+      Département d'Informatique et des Télécommunications
     </div>
-  </div>
 
-  <div class="sep-green"></div>
-  <div class="sep-dark"></div>
+    <div class="head-col head-center">
+      {% if logo_path %}
+      <img src="file:///{{ logo_path }}" class="logo-img" alt="Université de Maroua">
+      {% else %}
+      <div class="logo-fallback">ENSPM</div>
+      {% endif %}
+      <div class="contact">
+        B.P./P.O. Box : 46 Maroua<br>
+        Tel : (+237) 22 62 03 76 / (+237) 22 62 08 90<br>
+        Fax : (+237) 22 29 31 12 / (+237) 22 29 15 41<br>
+        Site web : <a href="http://www.enspm-univ-maroua.cm">http://www.enspm-univ-maroua.cm</a><br>
+        Email : <a href="mailto:polytech@univ-maroua.cm">polytech@univ-maroua.cm</a>
+      </div>
+    </div>
 
-  <!-- BOÎTE TITRE -->
+    <div class="head-col">
+      <strong>Republic of Cameroon</strong><br>
+      <em>Peace-Work-Fatherland</em><br>
+      <span class="dash">-------------</span><br>
+      Ministry of Higher Education<br>
+      <span class="dash">-------------</span><br>
+      <strong>THE UNIVERSITY OF MAROUA</strong><br>
+      <span class="dash">-------------</span><br>
+      <strong>NATIONAL ADVANCED SCHOOL OF ENGINEERING</strong><br>
+      <span class="dash">---------------</span><br>
+      Department of Computer Science and Telecommunications
+    </div>
+  </header>
+
+  <div class="green-line-light"></div>
+  <div class="green-line-dark"></div>
+
   <div class="title-box">
     <div class="main-title">EMPLOI DE TEMPS</div>
-    <div class="annee">
-      Année académique {{ semaine|date:"Y"|add:"-1" }} - {{ semaine|date:"Y" }} - Semestre I -
-      <a href="#">période du {{ semaine|date:"d" }} au {{ semaine|date:"d"|add:"5" }} {{ semaine|date:"F Y" }}</a>
+    <div class="sub-title">
+      Année académique {{ annee_debut }} - {{ annee_fin }} - Semestre I -
+      <span class="period">{{ periode_label }}</span>
     </div>
-    <div class="site-salle">
-      Site : {{ item.salle.site }}&nbsp;&nbsp;&nbsp;&nbsp;
-      <span class="salle-val">Salle : {{ item.salle.nom }}</span>
+    <div class="site-line">
+      <span class="site-label">Site : {{ item.salle.site }}</span>
+      <span class="room-label">Salle : {{ item.salle.nom }}</span>
     </div>
   </div>
 
-  <!-- TABLEAU -->
   <table class="edt">
     <thead>
       <tr>
-        <th class="th-horaire">HORAIRES</th>
+        <th class="horaire-head">HORAIRES</th>
         {% for code, label in jours %}
         <th>{{ label|upper }}</th>
         {% endfor %}
@@ -306,39 +300,35 @@ table.edt td.pause-full {
     </thead>
     <tbody>
       {% for ligne in item.lignes %}
-
-        {% if ligne.pause %}
-        <tr class="pause-row">
-          <td class="horaire-cell pause-label">{{ ligne.plage.label }}</td>
-          <td class="pause-full" colspan="6">PAUSE</td>
-        </tr>
-
-        {% else %}
-        <tr>
-          <td class="horaire-cell">{{ ligne.plage.label }}</td>
-          {% for cellule in ligne.cellules %}
-          <td class="day-cell">
-            {% for cr in cellule.creneaux %}
-            <span class="cell-inner">
-              <span class="cours-nom">{{ cr.cours.intitule }}</span>
-              <span class="cours-code">{{ cr.cours.codeCours }}</span>
-              {% if cr.cours.volumeHoraire %}
-              <span class="cours-volume">({{ cr.cours.volumeHoraire }})</span>
-              {% endif %}
-              <span class="cours-enseignant">{{ cr.enseignant.nom }} {{ cr.enseignant.prenom }}</span>
-            </span>
-            {% endfor %}
-          </td>
+      {% if ligne.pause %}
+      <tr class="pause-row">
+        <td class="horaire-cell">{{ ligne.plage.label }}</td>
+        <td class="pause-full" colspan="6">PAUSE</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td class="horaire-cell">{{ ligne.plage.label }}</td>
+        {% for cellule in ligne.cellules %}
+        <td class="day-cell">
+          {% for cr in cellule.creneaux %}
+          <span class="cell-inner">
+            <span class="cours-nom">{{ cr.cours.intitule }}</span>
+            <span class="cours-code">{{ cr.reference_affichage }}</span>
+            {% if cr.cours.volumeHoraire %}
+            <span class="cours-volume">({{ cr.cours.volumeHoraire }})</span>
+            {% endif %}
+            <span class="cours-enseignant">{{ cr.enseignant.nom }} {{ cr.enseignant.prenom }}</span>
+          </span>
           {% endfor %}
-        </tr>
-        {% endif %}
-
+        </td>
+        {% endfor %}
+      </tr>
+      {% endif %}
       {% endfor %}
     </tbody>
   </table>
 
-  <!-- PIED DE PAGE -->
-  <div class="footer">
+  <footer class="footer">
     <div class="footer-note">
       NB : Ce calendrier est dynamique et susceptible d'être modifié, les étudiants sont invités à bien vouloir
       régulièrement consulter le babillard et le Site Web de l'ECOLE NATIONALE SUPERIEURE POLYTECHNIQUE
@@ -346,10 +336,9 @@ table.edt td.pause-full {
       <a href="http://enspm.univ-maroua.cm">http://enspm.univ-maroua.cm</a>
       <a href="mailto:enspm@univ-maroua.cm">enspm@univ-maroua.cm</a>
     </div>
-    <div class="footer-directeur">Le Directeur,</div>
-  </div>
-
-</div>
+    <div class="footer-director">Le Directeur,</div>
+  </footer>
+</section>
 {% endfor %}
 
 </body>
