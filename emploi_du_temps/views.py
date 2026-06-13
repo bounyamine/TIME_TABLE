@@ -16,7 +16,6 @@ from django.utils.http import url_has_allowed_host_and_scheme
 
 from emploi_du_temps.forms import (
     CreneauDirectForm,
-    EmploiDuTempsForm,
     UtilisateurRoleCreationForm,
     UtilisateurRoleModificationForm,
 )
@@ -211,96 +210,70 @@ def grille_edt(request: HttpRequest, semaine: str | None = None) -> HttpResponse
 
 @cd_requis
 def ajouter_creneau_grille(request: HttpRequest) -> HttpResponse:
-    """Formulaire d'ajout d'un créneau depuis la grille"""
+    """Ajout d'un créneau depuis la popup de la grille."""
     semaine_str = request.GET.get("semaine") or request.POST.get("semaine") or str(date.today())
     semaine_date = _get_lundi(semaine_str)
-
-    # Préremplissage si clic sur une cellule
-    salle_initiale = request.GET.get("salle") or request.GET.get("salle_id") or ""
+    salle_initiale = request.GET.get("salle") or request.GET.get("salle_id") or request.POST.get("salle") or ""
+    redirect_url = f"/emplois-du-temps/grille/{semaine_date.isoformat()}/"
     if salle_initiale:
+        redirect_url += f"?salle_id={salle_initiale}"
+
+    if request.method != "POST":
+        messages.info(request, "Utilisez le bouton Ajouter un créneau depuis la grille.")
+        return redirect(redirect_url)
+
+    form = CreneauDirectForm(request.POST)
+    if form.is_valid():
+        # On récupère ou crée l'EmploiDuTemps brouillon global pour cette semaine.
+        # Toujours utiliser LE LUNDI de la semaine comme clé
+        semaine_lundi = _get_lundi(str(form.cleaned_data["semaine"]))
+        emploi, _ = EmploiDuTemps.objects.get_or_create(
+            semaine=semaine_lundi,
+            defaults={"creePar": request.user, "statut": EmploiDuTemps.Statut.BROUILLON},
+        )
         try:
-            salle_initiale = str(Salle.objects.get(pk=int(salle_initiale)).pk)
-        except (Salle.DoesNotExist, TypeError, ValueError):
-            salle_initiale = ""
-
-    initial = {
-        "semaine": semaine_date,
-        "salle": salle_initiale,
-        "jour": request.GET.get("jour", ""),
-        "plage": request.GET.get("plage", ""),
-    }
-
-    if request.method == "POST":
-        form = CreneauDirectForm(request.POST)
-        if form.is_valid():
-            # On récupère ou crée l'EmploiDuTemps brouillon global pour cette semaine.
-            # Toujours utiliser LE LUNDI de la semaine comme clé
-            semaine_lundi = _get_lundi(str(form.cleaned_data["semaine"]))
-            emploi, _ = EmploiDuTemps.objects.get_or_create(
-                semaine=semaine_lundi,
-                defaults={"creePar": request.user, "statut": EmploiDuTemps.Statut.BROUILLON},
+            plage = trouver_plage(form.cleaned_data["plage"])
+            creneau = Creneau(
+                emploiDuTemps=emploi,
+                option=form.cleaned_data["cours"].option,
+                jour=form.cleaned_data["jour"],
+                heureDebut=plage["debut"],
+                heureFin=plage["fin"],
+                cours=form.cleaned_data["cours"],
+                enseignant=form.cleaned_data["enseignant"],
+                salle=form.cleaned_data["salle"],
             )
-            try:
-                plage = trouver_plage(form.cleaned_data["plage"])
-                creneau = Creneau(
-                    emploiDuTemps=emploi,
-                    option=form.cleaned_data["cours"].option,
-                    jour=form.cleaned_data["jour"],
-                    heureDebut=plage["debut"],
-                    heureFin=plage["fin"],
-                    cours=form.cleaned_data["cours"],
-                    enseignant=form.cleaned_data["enseignant"],
-                    salle=form.cleaned_data["salle"],
-                )
-                creneau.full_clean()
-                creneau.save()
-                creneau.options.set(creneau.cours.options_effectives)
-                if request.headers.get("x-requested-with") == "XMLHttpRequest":
-                    return JsonResponse({
-                        "message": "Créneau ajouté.",
-                        "redirect_url": _url_grille_emploi(emploi, creneau.salle_id),
-                        "delete_url": f"/emplois-du-temps/grille/creneaux/{creneau.pk}/supprimer/",
-                    })
-                messages.success(request, "Créneau ajouté avec succès.")
-            except ValidationError as e:
-                if request.headers.get("x-requested-with") == "XMLHttpRequest":
-                    return JsonResponse({"message": " ".join(e.messages)}, status=400)
-                for msg in e.messages:
-                    messages.error(request, msg)
-                return render(request, "emploi_du_temps/grille/formulaire.html", {
-                    "form": form,
-                    "semaine": semaine_date,
-                    "titre": "Ajouter un créneau",
-                    "plages": PLAGES_HORAIRES,
-                    "jours": JOURS_EDT,
+            creneau.full_clean()
+            creneau.save()
+            creneau.options.set(creneau.cours.options_effectives)
+            if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                return JsonResponse({
+                    "message": "Créneau ajouté.",
+                    "redirect_url": _url_grille_emploi(emploi, creneau.salle_id),
+                    "delete_url": f"/emplois-du-temps/grille/creneaux/{creneau.pk}/supprimer/",
                 })
-            return redirect(f"/emplois-du-temps/grille/{semaine_lundi.isoformat()}/?salle_id={form.cleaned_data['salle'].pk}")
+            messages.success(request, "Créneau ajouté avec succès.")
+        except ValidationError as e:
+            if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                return JsonResponse({"message": " ".join(e.messages)}, status=400)
+            for msg in e.messages:
+                messages.error(request, msg)
+            return redirect(redirect_url)
+        return redirect(f"/emplois-du-temps/grille/{semaine_lundi.isoformat()}/?salle_id={form.cleaned_data['salle'].pk}")
 
-        if request.headers.get("x-requested-with") == "XMLHttpRequest":
-            errors = []
-            for field_errors in form.errors.values():
-                errors.extend(field_errors)
-            return JsonResponse({
-                "message": " ".join(errors) or "Formulaire invalide.",
-                "errors": form.errors,
-            }, status=400)
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        errors = []
+        for field_errors in form.errors.values():
+            errors.extend(field_errors)
+        return JsonResponse({
+            "message": " ".join(errors) or "Formulaire invalide.",
+            "errors": form.errors,
+        }, status=400)
 
-        return render(request, "emploi_du_temps/grille/formulaire.html", {
-            "form": form,
-            "semaine": semaine_date,
-            "titre": "Ajouter un créneau",
-            "plages": PLAGES_HORAIRES,
-            "jours": JOURS_EDT,
-        })
-
-    form = CreneauDirectForm(initial=initial)
-    return render(request, "emploi_du_temps/grille/formulaire.html", {
-        "form": form,
-        "semaine": semaine_date,
-        "titre": "Ajouter un créneau",
-        "plages": PLAGES_HORAIRES,
-        "jours": JOURS_EDT,
-    })
+    for field_errors in form.errors.values():
+        for error in field_errors:
+            messages.error(request, error)
+    return redirect(redirect_url)
 
 
 @cd_requis
@@ -335,10 +308,7 @@ def modifier_creneau_grille(request: HttpRequest, pk: int) -> HttpResponse:
                     return JsonResponse({"message": " ".join(e.messages)}, status=400)
                 for msg in e.messages:
                     messages.error(request, msg)
-                return render(request, "emploi_du_temps/grille/formulaire.html", {
-                    "form": form, "semaine": semaine, "titre": "Modifier un créneau",
-                    "creneau": creneau, "plages": PLAGES_HORAIRES, "jours": JOURS_EDT,
-                })
+                return redirect(_url_grille_emploi(creneau.emploiDuTemps, creneau.salle_id))
             if request.headers.get("x-requested-with") == "XMLHttpRequest":
                 return JsonResponse({
                     "message": "Créneau modifié.",
@@ -353,27 +323,12 @@ def modifier_creneau_grille(request: HttpRequest, pk: int) -> HttpResponse:
                 "message": " ".join(errors) or "Formulaire invalide.",
                 "errors": form.errors,
             }, status=400)
+        for field_errors in form.errors.values():
+            for error in field_errors:
+                messages.error(request, error)
     else:
-        # Préremplir le formulaire avec les valeurs existantes
-        # Trouver la plage correspondante
-        plage_id = ""
-        for p in PLAGES_HORAIRES:
-            if p["debut"] == creneau.heureDebut and p["fin"] == creneau.heureFin:
-                plage_id = p["id"]
-                break
-        form = CreneauDirectForm(initial={
-            "semaine": semaine.isoformat(),
-            "jour": creneau.jour,
-            "plage": plage_id,
-            "cours": creneau.cours,
-            "enseignant": creneau.enseignant,
-            "salle": creneau.salle,
-        }, instance=creneau)
-
-    return render(request, "emploi_du_temps/grille/formulaire.html", {
-        "form": form, "semaine": semaine, "titre": "Modifier un créneau",
-        "creneau": creneau, "plages": PLAGES_HORAIRES, "jours": JOURS_EDT,
-    })
+        messages.info(request, "Sélectionnez le créneau dans la grille pour le modifier.")
+    return redirect(_url_grille_emploi(creneau.emploiDuTemps, creneau.salle_id))
 
 
 @cd_requis
@@ -392,9 +347,8 @@ def supprimer_creneau_grille(request: HttpRequest, pk: int) -> HttpResponse:
             })
         messages.success(request, "Créneau supprimé.")
         return redirect(f"/emplois-du-temps/grille/{semaine.isoformat()}/?salle_id={salle_id}")
-    return render(request, "emploi_du_temps/grille/confirmer_suppression.html", {
-        "creneau": creneau, "semaine": semaine,
-    })
+    messages.info(request, "Utilisez la confirmation de suppression depuis la grille.")
+    return redirect(f"/emplois-du-temps/grille/{semaine.isoformat()}/?salle_id={salle_id}")
 
 
 @cd_requis
@@ -700,19 +654,27 @@ def _utilisateur_liste(request, role: str, template: str, context_name: str):
     return render(request, template, context)
 
 
-def _utilisateur_creer(request, role: str, template: str, redirect_name: str, label: str):
+def _messages_erreurs_form(form):
+    for field_errors in form.errors.values():
+        for error in field_errors:
+            yield error
+
+
+def _utilisateur_creer(request, role: str, redirect_name: str, label: str):
     if request.method == "POST":
         form = UtilisateurRoleCreationForm(request.POST, role=role)
         if form.is_valid():
             utilisateur = form.save()
             messages.success(request, f"{label} {utilisateur.nom} {utilisateur.prenom} créé avec succès.")
             return redirect(redirect_name)
+        for error in _messages_erreurs_form(form):
+            messages.error(request, error)
     else:
-        form = UtilisateurRoleCreationForm(role=role)
-    return render(request, template, {"action": "Créer", "form": form, "label": label})
+        messages.info(request, f"Utilisez le bouton d'ajout depuis la liste des {label.lower()}s.")
+    return redirect(redirect_name)
 
 
-def _utilisateur_modifier(request, pk: int, role: str, template: str, redirect_name: str, label: str):
+def _utilisateur_modifier(request, pk: int, role: str, redirect_name: str, label: str):
     utilisateur = get_object_or_404(Utilisateur, pk=pk, role=role)
     if request.method == "POST":
         form = UtilisateurRoleModificationForm(request.POST, instance=utilisateur, role=role)
@@ -720,12 +682,14 @@ def _utilisateur_modifier(request, pk: int, role: str, template: str, redirect_n
             form.save()
             messages.success(request, f"{label} modifié avec succès.")
             return redirect(redirect_name)
+        for error in _messages_erreurs_form(form):
+            messages.error(request, error)
     else:
-        form = UtilisateurRoleModificationForm(instance=utilisateur, role=role)
-    return render(request, template, {"action": "Modifier", "form": form, "label": label, "utilisateur": utilisateur})
+        messages.info(request, f"Cliquez sur une ligne de la liste pour modifier ce {label.lower()}.")
+    return redirect(redirect_name)
 
 
-def _utilisateur_supprimer(request, pk: int, role: str, template: str, redirect_name: str, label: str, context_name: str):
+def _utilisateur_supprimer(request, pk: int, role: str, redirect_name: str, label: str):
     utilisateur = get_object_or_404(Utilisateur, pk=pk, role=role)
     if request.method == "POST":
         try:
@@ -735,7 +699,8 @@ def _utilisateur_supprimer(request, pk: int, role: str, template: str, redirect_
             return redirect(redirect_name)
         messages.success(request, f"{label} supprimé.")
         return redirect(redirect_name)
-    return render(request, template, {context_name: utilisateur, "label": label})
+    messages.info(request, f"Utilisez la confirmation de suppression depuis la liste des {label.lower()}s.")
+    return redirect(redirect_name)
 
 
 @cd_requis
@@ -753,7 +718,6 @@ def enseignant_creer(request):
     return _utilisateur_creer(
         request,
         Utilisateur.Role.ENSEIGNANT,
-        "emploi_du_temps/ressources/enseignants/form.html",
         "enseignant_liste",
         "Enseignant",
     )
@@ -765,7 +729,6 @@ def enseignant_modifier(request, pk):
         request,
         pk,
         Utilisateur.Role.ENSEIGNANT,
-        "emploi_du_temps/ressources/enseignants/form.html",
         "enseignant_liste",
         "Enseignant",
     )
@@ -789,10 +752,8 @@ def enseignant_supprimer(request, pk):
         request,
         pk,
         Utilisateur.Role.ENSEIGNANT,
-        "emploi_du_temps/ressources/enseignants/confirmer_suppression.html",
         "enseignant_liste",
         "Enseignant",
-        "enseignant",
     )
 
 
@@ -811,7 +772,6 @@ def etudiant_creer(request):
     return _utilisateur_creer(
         request,
         Utilisateur.Role.ETUDIANT,
-        "emploi_du_temps/ressources/etudiants/form.html",
         "etudiant_liste",
         "Étudiant",
     )
@@ -823,7 +783,6 @@ def etudiant_modifier(request, pk):
         request,
         pk,
         Utilisateur.Role.ETUDIANT,
-        "emploi_du_temps/ressources/etudiants/form.html",
         "etudiant_liste",
         "Étudiant",
     )
@@ -847,10 +806,8 @@ def etudiant_supprimer(request, pk):
         request,
         pk,
         Utilisateur.Role.ETUDIANT,
-        "emploi_du_temps/ressources/etudiants/confirmer_suppression.html",
         "etudiant_liste",
         "Étudiant",
-        "etudiant",
     )
 
 
@@ -878,7 +835,9 @@ def ue_creer(request):
             UE.objects.create(codeUE=code, intituleUE=intitule)
             messages.success(request, f"UE {code} créée avec succès.")
             return redirect("ue_liste")
-    return render(request, "emploi_du_temps/ressources/ues/form.html", {"action": "Créer", "ue": None})
+    else:
+        messages.info(request, "Utilisez le bouton d'ajout depuis la liste des UE.")
+    return redirect("ue_liste")
 
 
 @cd_requis
@@ -892,7 +851,9 @@ def ue_modifier(request, pk):
             ue.save()
             messages.success(request, "UE modifiée avec succès.")
             return redirect("ue_liste")
-    return render(request, "emploi_du_temps/ressources/ues/form.html", {"action": "Modifier", "ue": ue})
+    else:
+        messages.info(request, "Cliquez sur une ligne de la liste pour modifier cette UE.")
+    return redirect("ue_liste")
 
 
 @cd_requis
@@ -906,7 +867,8 @@ def ue_supprimer(request, pk):
             return redirect("ue_liste")
         messages.success(request, "UE supprimée.")
         return redirect("ue_liste")
-    return render(request, "emploi_du_temps/ressources/ues/confirmer_suppression.html", {"ue": ue})
+    messages.info(request, "Utilisez la confirmation de suppression depuis la liste des UE.")
+    return redirect("ue_liste")
 
 
 @cd_requis
@@ -924,7 +886,6 @@ def cours_liste(request):
 @cd_requis
 def cours_creer(request):
     options = Option.objects.all()
-    ues = UE.objects.all()
     if request.method == "POST":
         ue_id = request.POST.get("ue")
         intitule = request.POST.get("intitule", "").strip()
@@ -944,13 +905,14 @@ def cours_creer(request):
             else:
                 messages.success(request, f"Cours {intitule} créé avec succès.")
                 return redirect("cours_liste")
-    return render(request, "emploi_du_temps/ressources/cours/form.html", {"action": "Créer", "cours": None, "options": options, "ues": ues})
+    else:
+        messages.info(request, "Utilisez le bouton d'ajout depuis la liste des cours.")
+    return redirect("cours_liste")
 
 @cd_requis
 def cours_modifier(request, pk):
     cours = get_object_or_404(Cours.objects.select_related("ue", "option").prefetch_related("options"), pk=pk)
     options = Option.objects.all()
-    ues = UE.objects.all()
     if request.method == "POST":
         option_ids = request.POST.getlist("options") or request.POST.getlist("option")
         cours.ue_id = request.POST.get("ue", cours.ue_id)
@@ -973,7 +935,9 @@ def cours_modifier(request, pk):
         else:
             messages.success(request, "Cours modifié avec succès.")
             return redirect("cours_liste")
-    return render(request, "emploi_du_temps/ressources/cours/form.html", {"action": "Modifier", "cours": cours, "options": options, "ues": ues})
+    else:
+        messages.info(request, "Cliquez sur une ligne de la liste pour modifier ce cours.")
+    return redirect("cours_liste")
 
 
 @cd_requis
@@ -999,7 +963,8 @@ def cours_supprimer(request, pk):
             return redirect("cours_liste")
         messages.success(request, "Cours supprimé.")
         return redirect("cours_liste")
-    return render(request, "emploi_du_temps/ressources/cours/confirmer_suppression.html", {"cours": cours})
+    messages.info(request, "Utilisez la confirmation de suppression depuis la liste des cours.")
+    return redirect("cours_liste")
 
 @cd_requis
 def salle_liste(request):
@@ -1023,7 +988,9 @@ def salle_creer(request):
             Salle.objects.create(nom=nom, capacite=int(capacite), site=site)
             messages.success(request, f"Salle {nom} créée avec succès.")
             return redirect("salle_liste")
-    return render(request, "emploi_du_temps/ressources/salles/form.html", {"action": "Créer", "salle": None})
+    else:
+        messages.info(request, "Utilisez le bouton d'ajout depuis la liste des salles.")
+    return redirect("salle_liste")
 
 @cd_requis
 def salle_modifier(request, pk):
@@ -1035,7 +1002,8 @@ def salle_modifier(request, pk):
         salle.save()
         messages.success(request, "Salle modifiée avec succès.")
         return redirect("salle_liste")
-    return render(request, "emploi_du_temps/ressources/salles/form.html", {"action": "Modifier", "salle": salle})
+    messages.info(request, "Cliquez sur une ligne de la liste pour modifier cette salle.")
+    return redirect("salle_liste")
 
 @cd_requis
 def salle_supprimer(request, pk):
@@ -1048,7 +1016,8 @@ def salle_supprimer(request, pk):
             return redirect("salle_liste")
         messages.success(request, "Salle supprimée.")
         return redirect("salle_liste")
-    return render(request, "emploi_du_temps/ressources/salles/confirmer_suppression.html", {"salle": salle})
+    messages.info(request, "Utilisez la confirmation de suppression depuis la liste des salles.")
+    return redirect("salle_liste")
 
 @cd_requis
 def option_liste(request):
@@ -1071,7 +1040,9 @@ def option_creer(request):
             Option.objects.create(nom=nom, niveau=int(niveau))
             messages.success(request, f"Option {nom} créée avec succès.")
             return redirect("option_liste")
-    return render(request, "emploi_du_temps/ressources/options/form.html", {"action": "Créer", "option": None})
+    else:
+        messages.info(request, "Utilisez le bouton d'ajout depuis la liste des options.")
+    return redirect("option_liste")
 
 @cd_requis
 def option_modifier(request, pk):
@@ -1082,7 +1053,8 @@ def option_modifier(request, pk):
         option.save()
         messages.success(request, "Option modifiée avec succès.")
         return redirect("option_liste")
-    return render(request, "emploi_du_temps/ressources/options/form.html", {"action": "Modifier", "option": option})
+    messages.info(request, "Cliquez sur une ligne de la liste pour modifier cette option.")
+    return redirect("option_liste")
 
 @cd_requis
 def option_supprimer(request, pk):
@@ -1095,4 +1067,5 @@ def option_supprimer(request, pk):
             return redirect("option_liste")
         messages.success(request, "Option supprimée.")
         return redirect("option_liste")
-    return render(request, "emploi_du_temps/ressources/options/confirmer_suppression.html", {"option": option})
+    messages.info(request, "Utilisez la confirmation de suppression depuis la liste des options.")
+    return redirect("option_liste")
