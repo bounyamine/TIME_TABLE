@@ -189,18 +189,37 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="id_option">
+        <label class="form-label" for="id_option_sigle">
           <i class="ti ti-award"></i> Option <span class="form-required">*</span>
         </label>
-        <select class="form-control" id="id_option" name="option" required>
+        <select class="form-control" id="id_option_sigle" name="option_sigle" required>
           <option value="">-- Sélectionner votre option --</option>
-          {% for option in form.option.field.queryset %}
-          <option value="{{ option.pk }}" {% if form.option.value|stringformat:"s" == option.pk|stringformat:"s" %}selected{% endif %}>
-            {{ option.nom }} — Niveau {{ option.niveau }}
+          {% for value,label in form.option_sigle.field.choices %}
+          {% if value %}
+          <option value="{{ value }}" {% if form.option_sigle.value == value %}selected{% endif %}>
+            {{ label }}
           </option>
+          {% endif %}
           {% endfor %}
         </select>
-        {% if form.option.errors %}<div class="field-errors">{{ form.option.errors|join:", " }}</div>{% endif %}
+        {% if form.option_sigle.errors %}<div class="field-errors">{{ form.option_sigle.errors|join:", " }}</div>{% endif %}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="id_niveau">
+          <i class="ti ti-layers-subtract"></i> Niveau <span class="form-required">*</span>
+        </label>
+        <select class="form-control" id="id_niveau" name="niveau" required>
+          <option value="">-- Sélectionner votre niveau --</option>
+          {% for value,label in form.niveau.field.choices %}
+          {% if value %}
+          <option value="{{ value }}" {% if form.niveau.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>
+            {{ label }}
+          </option>
+          {% endif %}
+          {% endfor %}
+        </select>
+        {% if form.niveau.errors %}<div class="field-errors">{{ form.niveau.errors|join:", " }}</div>{% endif %}
       </div>
 
       <div class="form-group">

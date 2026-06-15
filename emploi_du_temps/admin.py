@@ -20,13 +20,13 @@ from .models import (
 class UtilisateurAdmin(UserAdmin):
 
     fieldsets = UserAdmin.fieldsets + (
-        ("Informations métier", {"fields": ("nom", "prenom", "role", "option")}),
+        ("Informations métier", {"fields": ("nom", "prenom", "role", "option", "niveau")}),
     )
     add_fieldsets = UserAdmin.add_fieldsets + (
-        ("Informations métier", {"fields": ("email", "nom", "prenom", "role", "option")}),
+        ("Informations métier", {"fields": ("email", "nom", "prenom", "role", "option", "niveau")}),
     )
-    list_display = ("username", "email", "nom", "prenom", "role", "option", "is_staff")
-    list_filter = ("role", "option", "is_staff", "is_superuser", "is_active")
+    list_display = ("username", "email", "nom", "prenom", "role", "option", "niveau", "is_staff")
+    list_filter = ("role", "option", "niveau", "is_staff", "is_superuser", "is_active")
     search_fields = ("username", "email", "nom", "prenom")
 
 
@@ -53,9 +53,8 @@ class EtudiantAdmin(UtilisateurAdmin):
 
 @admin.register(Option)
 class OptionAdmin(admin.ModelAdmin):
-    list_display = ("nom", "niveau")
-    search_fields = ("nom",)
-    list_filter = ("niveau",)
+    list_display = ("sigle", "nom")
+    search_fields = ("sigle", "nom")
 
 
 @admin.register(UE)
@@ -66,9 +65,9 @@ class UEAdmin(admin.ModelAdmin):
 
 @admin.register(Cours)
 class CoursAdmin(admin.ModelAdmin):
-    list_display = ("codeCours", "ue", "intitule", "volumeHoraire", "options_affichage", "status")
+    list_display = ("codeCours", "ue", "intitule", "niveau", "volumeHoraire", "options_affichage", "status")
     search_fields = ("codeCours", "intitule", "ue__intituleUE")
-    list_filter = ("ue", "options", "status")
+    list_filter = ("ue", "niveau", "options", "status")
     filter_horizontal = ("options",)
 
 
@@ -87,6 +86,7 @@ class CreneauInline(admin.TabularInline):
     def save_new(self, form, commit=True):
         obj = super().save_new(form, commit=False)
         obj.option = obj.cours.option
+        obj.niveau = obj.cours.niveau
         if commit:
             obj.save()
             obj.options.set(obj.cours.options_effectives)
@@ -95,6 +95,7 @@ class CreneauInline(admin.TabularInline):
     def save_existing(self, form, instance, commit=True):
         obj = super().save_existing(form, instance, commit=False)
         obj.option = obj.cours.option
+        obj.niveau = obj.cours.niveau
         if commit:
             obj.save()
             obj.options.set(obj.cours.options_effectives)
@@ -117,9 +118,10 @@ class CreneauAdmin(admin.ModelAdmin):
         "cours",
         "enseignant",
         "salle",
+        "niveau",
         "options_affichage",
     )
-    list_filter = ("jour", "salle", "options", "enseignant")
+    list_filter = ("jour", "niveau", "salle", "options", "enseignant")
     search_fields = ("cours__codeCours", "cours__intitule", "salle__nom")
     filter_horizontal = ("options",)
 

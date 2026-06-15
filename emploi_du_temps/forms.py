@@ -1,10 +1,33 @@
 from django import forms
 from django.contrib.auth import password_validation
+from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 
 from .models import Cours, Creneau, EmploiDuTemps, Option, Salle, Utilisateur
 from .grille import PLAGES_HORAIRES, JOURS_EDT, trouver_plage
+
+
+NIVEAU_CHOICES = [(3, "3"), (4, "4"), (5, "5")]
+
+
+def option_pour_sigle(sigle: str) -> Option | None:
+    return Option.objects.filter(sigle=sigle).first()
+
+
+class UsernameOrEmailAuthenticationForm(AuthenticationForm):
+    username = forms.CharField(
+        label="Nom d'utilisateur ou email",
+        widget=forms.TextInput(attrs={"autocomplete": "username", "autofocus": True}),
+    )
+
+    def clean(self):
+        identifiant = self.cleaned_data.get("username", "").strip()
+        if identifiant:
+            utilisateur = Utilisateur.objects.filter(email__iexact=identifiant).first()
+            if utilisateur:
+                self.cleaned_data["username"] = utilisateur.get_username()
+        return super().clean()
 
 
 def enseignants_actifs_queryset():
@@ -22,12 +45,17 @@ class CoursModelChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         ue_label = obj.ue.intituleUE if getattr(obj, "ue", None) else "UE non renseignée"
         options_label = obj.options_affichage or obj.option.sigle
-        return f"{obj.codeCours} — {obj.intitule} — UE : {ue_label} ({options_label})"
+        return f"{obj.codeCours} — {obj.intitule} — UE : {ue_label} ({options_label}, niveau {obj.niveau})"
 
 
 class UtilisateurRoleCreationForm(forms.ModelForm):
     """Création d'un utilisateur métier avec rôle imposé par la vue."""
 
+    option_sigle = forms.ChoiceField(
+        label="Option",
+        choices=[],
+        required=False,
+    )
     password = forms.CharField(
         label="Mot de passe",
         strip=False,
@@ -36,16 +64,24 @@ class UtilisateurRoleCreationForm(forms.ModelForm):
 
     class Meta:
         model = Utilisateur
-        fields = ["nom", "prenom", "email", "username", "option"]
+        fields = ["nom", "prenom", "email", "username", "option", "niveau"]
 
     def __init__(self, *args, role: str, **kwargs):
         super().__init__(*args, **kwargs)
         self.role = role
         self.instance.role = role
         self.fields["option"].queryset = Option.objects.all()
-        self.fields["option"].required = role == Utilisateur.Role.ETUDIANT
+        self.fields["option"].required = False
+        self.fields["option_sigle"].choices = [("", "-- Sélectionner votre option --")] + [
+            (option.sigle, f"{option.sigle} - {option.nom}")
+            for option in Option.objects.all()
+        ]
+        self.fields["niveau"].choices = [("", "-- Sélectionner votre niveau --")] + NIVEAU_CHOICES
+        self.fields["niveau"].required = role == Utilisateur.Role.ETUDIANT
         if role != Utilisateur.Role.ETUDIANT:
             self.fields.pop("option")
+            self.fields.pop("option_sigle")
+            self.fields.pop("niveau")
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-control")
 
@@ -67,11 +103,36 @@ class UtilisateurRoleCreationForm(forms.ModelForm):
             raise ValidationError("Ce nom d'utilisateur est déjà pris.")
         return username
 
+    def clean_niveau(self):
+        niveau = self.cleaned_data.get("niveau")
+        if niveau in ("", None):
+            return None
+        return int(niveau)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.role == Utilisateur.Role.ETUDIANT:
+            option = cleaned_data.get("option")
+            option_sigle = cleaned_data.get("option_sigle")
+            niveau = cleaned_data.get("niveau")
+            if option_sigle:
+                option = option_pour_sigle(option_sigle)
+                if option is None:
+                    self.add_error("option_sigle", "Cette option n'existe pas encore dans la base.")
+                else:
+                    cleaned_data["option"] = option
+            if option is None and not option_sigle:
+                self.add_error("option_sigle", "L'option est obligatoire pour un étudiant.")
+            if niveau is None:
+                self.add_error("niveau", "Le niveau est obligatoire pour un étudiant.")
+        return cleaned_data
+
     def save(self, commit=True):
         utilisateur = super().save(commit=False)
         utilisateur.role = self.role
         if self.role != Utilisateur.Role.ETUDIANT:
             utilisateur.option = None
+            utilisateur.niveau = None
         utilisateur.set_password(self.cleaned_data["password"])
         if commit:
             utilisateur.full_clean()
@@ -84,15 +145,18 @@ class UtilisateurRoleModificationForm(forms.ModelForm):
 
     class Meta:
         model = Utilisateur
-        fields = ["nom", "prenom", "email", "option", "is_active"]
+        fields = ["nom", "prenom", "email", "option", "niveau", "is_active"]
 
     def __init__(self, *args, role: str, **kwargs):
         super().__init__(*args, **kwargs)
         self.role = role
         self.fields["option"].queryset = Option.objects.all()
         self.fields["option"].required = role == Utilisateur.Role.ETUDIANT
+        self.fields["niveau"].choices = [("", "-- Sélectionner --")] + NIVEAU_CHOICES
+        self.fields["niveau"].required = role == Utilisateur.Role.ETUDIANT
         if role != Utilisateur.Role.ETUDIANT:
             self.fields.pop("option")
+            self.fields.pop("niveau")
         self.fields["is_active"].required = False
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-control")
@@ -109,6 +173,7 @@ class UtilisateurRoleModificationForm(forms.ModelForm):
         utilisateur.role = self.role
         if self.role != Utilisateur.Role.ETUDIANT:
             utilisateur.option = None
+            utilisateur.niveau = None
         if commit:
             utilisateur.full_clean()
             utilisateur.save()
@@ -187,6 +252,8 @@ class CreneauForm(forms.ModelForm):
             raise ValidationError("Cet enseignant est déjà affecté sur ce créneau.")
         option_ids = [option.pk for option in cours.options_effectives]
         if chevauchements.filter(
+            niveau=cours.niveau,
+        ).filter(
             Q(option_id__in=option_ids) | Q(options__in=option_ids)
         ).distinct().exists():
             raise ValidationError("Cette option a déjà un cours sur ce créneau.")
@@ -196,6 +263,7 @@ class CreneauForm(forms.ModelForm):
         creneau = super().save(commit=False)
         creneau.emploiDuTemps = self.emploi_du_temps
         creneau.option = creneau.cours.option
+        creneau.niveau = creneau.cours.niveau
         if commit:
             creneau.save()
             creneau.options.set(creneau.cours.options_effectives)

@@ -7,6 +7,7 @@ from django.contrib.auth.views import LoginView
 from django.views.decorators.http import require_POST
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.db import IntegrityError
 from django.db.models import ProtectedError, Q
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -16,10 +17,17 @@ from django.utils.http import url_has_allowed_host_and_scheme
 
 from emploi_du_temps.forms import (
     CreneauDirectForm,
+    UsernameOrEmailAuthenticationForm,
     UtilisateurRoleCreationForm,
     UtilisateurRoleModificationForm,
 )
-from emploi_du_temps.grille import JOURS_EDT, PLAGES_HORAIRES, construire_grille_semaine, trouver_plage
+from emploi_du_temps.grille import (
+    JOURS_EDT,
+    PLAGES_HORAIRES,
+    construire_grille_semaine,
+    creneaux_visibles_semaine,
+    trouver_plage,
+)
 from emploi_du_temps.pdf_export import generer_pdf_emplois_du_temps
 from emploi_du_temps.permissions import cd_requis
 from .models import Cours, Creneau, EmploiDuTemps, Option, Salle, UE, Utilisateur
@@ -28,6 +36,7 @@ from .models import Cours, Creneau, EmploiDuTemps, Option, Salle, UE, Utilisateu
 class ConnexionView(LoginView):
     template_name = "registration/login.html"
     redirect_authenticated_user = True
+    authentication_form = UsernameOrEmailAuthenticationForm
 
     def get_success_url(self) -> str:
         return reverse_lazy("tableau_de_bord")
@@ -76,20 +85,10 @@ def tableau_de_bord(request: HttpRequest) -> HttpResponse:
         })
     elif utilisateur.role == Utilisateur.Role.ENSEIGNANT:
         template = "emploi_du_temps/tableaux_de_bord/enseignant.html"
-        context["emplois_du_temps"] = EmploiDuTemps.objects.filter(
-            statut=EmploiDuTemps.Statut.PUBLIE,
-            creneaux__enseignant=utilisateur,
-        ).distinct()
+        context["emplois_du_temps"] = EmploiDuTemps.objects.filter(statut=EmploiDuTemps.Statut.PUBLIE)
     elif utilisateur.role == Utilisateur.Role.ETUDIANT:
         template = "emploi_du_temps/tableaux_de_bord/etudiant.html"
-        emplois_du_temps = EmploiDuTemps.objects.filter(statut=EmploiDuTemps.Statut.PUBLIE)
-        if utilisateur.option_id:
-            emplois_du_temps = emplois_du_temps.filter(
-                Q(creneaux__option=utilisateur.option) | Q(creneaux__options=utilisateur.option)
-            ).distinct()
-        else:
-            emplois_du_temps = emplois_du_temps.none()
-        context["emplois_du_temps"] = emplois_du_temps
+        context["emplois_du_temps"] = EmploiDuTemps.objects.filter(statut=EmploiDuTemps.Statut.PUBLIE)
     else:
         return HttpResponseForbidden("Rôle utilisateur non autorisé.")
 
@@ -125,28 +124,78 @@ def _get_lundi(semaine_str: str | None) -> date:
     return today - timedelta(days=today.weekday())
 
 
+def _entier_get(request: HttpRequest, nom: str) -> int | None:
+    valeur = request.GET.get(nom, "")
+    try:
+        return int(valeur) if valeur else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _filtres_grille_depuis_requete(request: HttpRequest, salles) -> dict:
+    salle_id = _entier_get(request, "salle_id")
+    if salle_id and not salles.filter(pk=salle_id).exists():
+        salle_id = None
+
+    enseignant_id = _entier_get(request, "enseignant_id")
+    if enseignant_id and not Utilisateur.objects.filter(pk=enseignant_id, role=Utilisateur.Role.ENSEIGNANT).exists():
+        enseignant_id = None
+
+    option_id = _entier_get(request, "option_id")
+    if option_id and not Option.objects.filter(pk=option_id).exists():
+        option_id = None
+
+    niveau = _entier_get(request, "niveau")
+    niveaux_valides = {niveau for niveau, _label in Utilisateur.NIVEAU_CHOICES}
+    if niveau not in niveaux_valides:
+        niveau = None
+
+    return {
+        "salle_id": salle_id,
+        "enseignant_id": enseignant_id,
+        "option_id": option_id,
+        "niveau": niveau,
+    }
+
+
+def _query_grille(request: HttpRequest, export: bool = False) -> str:
+    query_params = request.GET.copy()
+    query_params.pop("export", None)
+    if export:
+        query_params["export"] = "pdf"
+    return query_params.urlencode()
+
+
 @login_required
 def grille_edt(request: HttpRequest, semaine: str | None = None) -> HttpResponse:
     """Grille EDT par semaine — vue principale."""
     semaine_date = _get_lundi(semaine or request.GET.get("semaine"))
     salles = Salle.objects.all()
-    salle_id_param = request.GET.get("salle_id", "")
-    try:
-        salle_id = int(salle_id_param) if salle_id_param else None
-    except (TypeError, ValueError):
-        salle_id = None
-    if salle_id and not salles.filter(pk=salle_id).exists():
-        salle_id = None
-    if not salle_id:
+    est_cd = request.user.role == Utilisateur.Role.CD
+    filtres = _filtres_grille_depuis_requete(request, salles)
+    salle_id = filtres["salle_id"]
+    if est_cd and not salle_id:
         premiere_salle = salles.first()
         salle_id = premiere_salle.pk if premiere_salle else None
-    
-    est_cd = request.user.role == Utilisateur.Role.CD
+        filtres["salle_id"] = salle_id
 
     if request.GET.get("export") == "pdf":
+        if request.user.role not in {
+            Utilisateur.Role.CD,
+            Utilisateur.Role.ENSEIGNANT,
+            Utilisateur.Role.ETUDIANT,
+        }:
+            return HttpResponseForbidden("Rôle utilisateur non autorisé.")
         if not est_cd:
-            return HttpResponseForbidden("Seul le chef de département peut exporter le planning global.")
-        export = generer_pdf_emplois_du_temps(semaine_date)
+            emplois_export = EmploiDuTemps.objects.filter(
+                semaine=semaine_date,
+                statut=EmploiDuTemps.Statut.PUBLIE,
+            )
+            if not emplois_export.exists():
+                return HttpResponseForbidden("Aucun emploi du temps publié pour cette semaine.")
+            if not creneaux_visibles_semaine(semaine_date, request.user, filtres=filtres).exists():
+                return HttpResponseForbidden("Aucun créneau publié ne correspond aux filtres sélectionnés.")
+        export = generer_pdf_emplois_du_temps(semaine_date, utilisateur=request.user, filtres=filtres)
         response = HttpResponse(export.contenu, content_type="application/pdf")
         response["Content-Disposition"] = f'attachment; filename="{export.nom_fichier}"'
         return response
@@ -154,23 +203,14 @@ def grille_edt(request: HttpRequest, semaine: str | None = None) -> HttpResponse
 
     lignes = construire_grille_semaine(
         semaine_date,
-        salle_id=salle_id,
         utilisateur=request.user,
+        filtres=filtres,
     )
 
     # Semaines déjà planifiées
     semaines_dispo_qs = EmploiDuTemps.objects.all()
     if not est_cd:
         semaines_dispo_qs = semaines_dispo_qs.filter(statut=EmploiDuTemps.Statut.PUBLIE)
-        if request.user.role == Utilisateur.Role.ENSEIGNANT:
-            semaines_dispo_qs = semaines_dispo_qs.filter(creneaux__enseignant=request.user)
-        elif request.user.role == Utilisateur.Role.ETUDIANT:
-            if request.user.option_id:
-                semaines_dispo_qs = semaines_dispo_qs.filter(
-                    Q(creneaux__option=request.user.option) | Q(creneaux__options=request.user.option)
-                )
-            else:
-                semaines_dispo_qs = semaines_dispo_qs.none()
     semaines_dispo = (
         semaines_dispo_qs.values_list("semaine", flat=True)
         .distinct()
@@ -181,15 +221,8 @@ def grille_edt(request: HttpRequest, semaine: str | None = None) -> HttpResponse
     emplois_semaine = EmploiDuTemps.objects.filter(semaine=semaine_date).prefetch_related("creneaux")
     if not est_cd:
         emplois_semaine = emplois_semaine.filter(statut=EmploiDuTemps.Statut.PUBLIE)
-        if request.user.role == Utilisateur.Role.ENSEIGNANT:
-            emplois_semaine = emplois_semaine.filter(creneaux__enseignant=request.user).distinct()
-        elif request.user.role == Utilisateur.Role.ETUDIANT:
-            if request.user.option_id:
-                emplois_semaine = emplois_semaine.filter(
-                    Q(creneaux__option=request.user.option) | Q(creneaux__options=request.user.option)
-                ).distinct()
-            else:
-                emplois_semaine = emplois_semaine.none()
+    navigation_query = _query_grille(request)
+    export_query = _query_grille(request, export=True)
 
     return render(request, "emploi_du_temps/grille/index.html", {
         "semaine": semaine_date,
@@ -200,6 +233,17 @@ def grille_edt(request: HttpRequest, semaine: str | None = None) -> HttpResponse
         "plages": PLAGES_HORAIRES,
         "salles": salles,
         "salle_id_actif": salle_id,
+        "enseignant_id_actif": filtres["enseignant_id"],
+        "option_id_actif": filtres["option_id"],
+        "niveau_actif": filtres["niveau"],
+        "enseignants_filtre": Utilisateur.objects.filter(
+            role=Utilisateur.Role.ENSEIGNANT,
+            is_active=True,
+        ).order_by("nom", "prenom"),
+        "options_filtre": Option.objects.all(),
+        "niveaux_filtre": Utilisateur.NIVEAU_CHOICES,
+        "navigation_query": navigation_query,
+        "export_url": f"/emplois-du-temps/grille/{semaine_date.isoformat()}/?{export_query}",
         "semaines_dispo": semaines_dispo,
         "est_cd": est_cd,
         "emplois_semaine": emplois_semaine,
@@ -242,6 +286,7 @@ def ajouter_creneau_grille(request: HttpRequest) -> HttpResponse:
             creneau = Creneau(
                 emploiDuTemps=emploi,
                 option=form.cleaned_data["cours"].option,
+                niveau=form.cleaned_data["cours"].niveau,
                 jour=form.cleaned_data["jour"],
                 heureDebut=plage["debut"],
                 heureFin=plage["fin"],
@@ -303,6 +348,7 @@ def modifier_creneau_grille(request: HttpRequest, pk: int) -> HttpResponse:
                 creneau.heureFin = plage["fin"]
                 creneau.cours = form.cleaned_data["cours"]
                 creneau.option = form.cleaned_data["cours"].option
+                creneau.niveau = form.cleaned_data["cours"].niveau
                 creneau.enseignant = form.cleaned_data["enseignant"]
                 creneau.salle = form.cleaned_data["salle"]
                 creneau.full_clean()
@@ -443,13 +489,19 @@ def ajax_conflits(request: HttpRequest) -> JsonResponse:
                 "message": f"Conflit d'ENSEIGNANT : {c.enseignant.nom} {c.enseignant.prenom} est déjà programmé(e) le {c.get_jour_display()} de {c.heureDebut.strftime('%H:%M')} à {c.heureFin.strftime('%H:%M')} en salle {c.salle.nom} pour le cours {c.cours.intitule}.",
             })
     option_ids = []
+    cours_niveau = None
     if cours_id:
-        option_ids = list(Cours.objects.filter(pk=cours_id).values_list("options__id", flat=True))
-        if not option_ids:
-            option_principale = Cours.objects.filter(pk=cours_id).values_list("option_id", flat=True).first()
-            option_ids = [option_principale] if option_principale else []
+        cours_obj = Cours.objects.filter(pk=cours_id).first()
+        if cours_obj:
+            cours_niveau = cours_obj.niveau
+            option_ids = list(cours_obj.options.values_list("id", flat=True))
+            if not option_ids and cours_obj.option_id:
+                option_ids = [cours_obj.option_id]
     if option_ids:
-        for c in qs.filter(Q(option_id__in=option_ids) | Q(options__id__in=option_ids)).distinct():
+        qs_options = qs.filter(Q(option_id__in=option_ids) | Q(options__id__in=option_ids))
+        if cours_niveau:
+            qs_options = qs_options.filter(niveau=cours_niveau)
+        for c in qs_options.distinct():
             conflits.append({
                 "type": "option",
                 "message": f"Conflit OPTION : « {c.options_affichage} » a déjà un cours le {c.get_jour_display()} de {c.heureDebut.strftime('%H:%M')} à {c.heureFin.strftime('%H:%M')} ({c.cours.intitule} — salle {c.salle.nom}).",
@@ -555,6 +607,7 @@ def copier_creneau(request: HttpRequest, pk: int) -> HttpResponse:
     copie = Creneau(
         emploiDuTemps=emploi, cours=source.cours,
         enseignant=source.enseignant, salle=salle, option=source.option,
+        niveau=source.niveau,
         jour=jour, heureDebut=plage["debut"], heureFin=plage["fin"],
     )
     try:
@@ -602,6 +655,7 @@ def restaurer_creneau(request: HttpRequest) -> HttpResponse:
         enseignant=enseignant,
         salle=salle,
         option=cours.option,
+        niveau=cours.niveau,
     )
     try:
         creneau.full_clean()
@@ -896,11 +950,18 @@ def cours_creer(request):
         ue_id = request.POST.get("ue")
         intitule = request.POST.get("intitule", "").strip()
         volume = request.POST.get("volumeHoraire", "").strip()
+        niveau = request.POST.get("niveau", "").strip()
         option_ids = request.POST.getlist("options") or request.POST.getlist("option")
-        if not all([ue_id, intitule]) or not option_ids:
+        if not all([ue_id, intitule, niveau]) or not option_ids:
             messages.error(request, "Tous les champs marqués * sont obligatoires.")
         else:
-            cours = Cours(ue_id=ue_id, intitule=intitule, volumeHoraire=volume, option_id=option_ids[0])
+            cours = Cours(
+                ue_id=ue_id,
+                intitule=intitule,
+                volumeHoraire=volume,
+                niveau=int(niveau),
+                option_id=option_ids[0],
+            )
             try:
                 cours.full_clean()
                 cours.save()
@@ -924,6 +985,7 @@ def cours_modifier(request, pk):
         cours.ue_id = request.POST.get("ue", cours.ue_id)
         cours.intitule = request.POST.get("intitule", cours.intitule).strip()
         cours.volumeHoraire = request.POST.get("volumeHoraire", cours.volumeHoraire).strip()
+        cours.niveau = int(request.POST.get("niveau", cours.niveau))
         if option_ids:
             cours.option_id = option_ids[0]
         try:
@@ -933,7 +995,8 @@ def cours_modifier(request, pk):
                 cours.options.set(options.filter(pk__in=option_ids))
                 for creneau in Creneau.objects.filter(cours=cours):
                     creneau.option = cours.option
-                    creneau.save(update_fields=["option"])
+                    creneau.niveau = cours.niveau
+                    creneau.save(update_fields=["option", "niveau"])
                     creneau.options.set(cours.options_effectives)
         except ValidationError as e:
             for msg in e.messages:
@@ -1039,13 +1102,17 @@ def option_liste(request):
 def option_creer(request):
     if request.method == "POST":
         nom = request.POST.get("nom", "").strip()
-        niveau = request.POST.get("niveau", "").strip()
-        if not all([nom, niveau]):
+        sigle = request.POST.get("sigle", "").strip().upper()
+        if not all([sigle, nom]):
             messages.error(request, "Tous les champs sont obligatoires.")
         else:
-            Option.objects.create(nom=nom, niveau=int(niveau))
-            messages.success(request, f"Option {nom} créée avec succès.")
-            return redirect("option_liste")
+            try:
+                Option.objects.create(sigle=sigle, nom=nom)
+            except IntegrityError:
+                messages.error(request, "Cette option existe déjà.")
+            else:
+                messages.success(request, f"Option {sigle} créée avec succès.")
+                return redirect("option_liste")
     else:
         messages.info(request, "Utilisez le bouton d'ajout depuis la liste des options.")
     return redirect("option_liste")
@@ -1054,11 +1121,19 @@ def option_creer(request):
 def option_modifier(request, pk):
     option = get_object_or_404(Option, pk=pk)
     if request.method == "POST":
+        sigle = request.POST.get("sigle", option.sigle).strip().upper()
         option.nom = request.POST.get("nom", option.nom).strip()
-        option.niveau = int(request.POST.get("niveau", option.niveau))
-        option.save()
-        messages.success(request, "Option modifiée avec succès.")
-        return redirect("option_liste")
+        if not all([sigle, option.nom]):
+            messages.error(request, "Tous les champs sont obligatoires.")
+        else:
+            option.sigle = sigle
+            try:
+                option.save()
+            except IntegrityError:
+                messages.error(request, "Ce sigle ou ce nom est déjà utilisé.")
+            else:
+                messages.success(request, "Option modifiée avec succès.")
+                return redirect("option_liste")
     messages.info(request, "Cliquez sur une ligne de la liste pour modifier cette option.")
     return redirect("option_liste")
 

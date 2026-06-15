@@ -8,7 +8,7 @@
     <div class="page-icon"><i class="ti ti-chalkboard"></i></div>
     <div>
       <h1 class="page-title">Tableau de bord enseignant</h1>
-      <p class="page-sub">Consultez uniquement les emplois du temps publiés qui vous concernent.</p>
+      <p class="page-sub">Consultez les emplois du temps publiés et filtrez-les selon vos besoins.</p>
     </div>
   </div>
 </div>
@@ -28,7 +28,10 @@
           <td class="td-bold">{{ emploi.semaine }}</td>
           <td>Département</td>
           <td><span class="badge badge-green"><span class="dot"></span>{{ emploi.get_statut_display }}</span></td>
-          <td><a class="btn btn-outline btn-sm" href="{% url 'grille_edt_semaine' emploi.semaine|date:'Y-m-d' %}"><i class="ti ti-eye"></i> Voir</a></td>
+          <td>
+            <a class="btn btn-outline btn-sm" href="{% url 'grille_edt_semaine' emploi.semaine|date:'Y-m-d' %}"><i class="ti ti-eye"></i> Voir</a>
+            <a class="btn btn-secondary btn-sm" href="{% url 'grille_edt_semaine' emploi.semaine|date:'Y-m-d' %}?export=pdf"><i class="ti ti-file-type-pdf"></i> PDF</a>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -38,7 +41,7 @@
   <div class="empty-state">
     <div class="empty-ico"><i class="ti ti-calendar-off"></i></div>
     <h3 class="empty-title">Aucun emploi du temps publié</h3>
-    <p class="empty-text">Aucun créneau publié ne vous est encore affecté.</p>
+    <p class="empty-text">Les versions validées apparaîtront ici dès leur publication.</p>
   </div>
   {% endif %}
 </div>
