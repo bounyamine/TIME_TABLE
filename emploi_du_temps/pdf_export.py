@@ -9,7 +9,7 @@ from django.template.loader import render_to_string
 from django.utils.text import slugify
 from weasyprint import HTML
 
-from .grille import JOURS_EDT, construire_grille_semaine
+from .grille import JOURS_EDT, construire_grille_semaine, creneaux_visibles_semaine
 from .models import Salle
 
 
@@ -19,17 +19,28 @@ class ExportPlanning:
     nom_fichier: str
 
 
-def generer_pdf_emplois_du_temps(semaine: date) -> ExportPlanning:
-    salles = Salle.objects.filter(
-        creneaux__emploiDuTemps__semaine=semaine
-    ).distinct()
-    if not salles.exists():
+def generer_pdf_emplois_du_temps(semaine: date, utilisateur=None, filtres: dict | None = None) -> ExportPlanning:
+    filtres = filtres or {}
+    creneaux = creneaux_visibles_semaine(semaine, utilisateur, filtres=filtres)
+    salles = Salle.objects.filter(creneaux__in=creneaux).distinct()
+    if filtres.get("salle_id"):
+        salles = Salle.objects.filter(pk=filtres["salle_id"])
+    if not salles.exists() and (
+        not utilisateur
+        or not utilisateur.is_authenticated
+        or utilisateur.role == utilisateur.Role.CD
+    ):
         salles = Salle.objects.all()
 
     salles_lignes = [
         {
             "salle": salle,
-            "lignes": construire_grille_semaine(semaine, salle_id=salle.pk),
+            "lignes": construire_grille_semaine(
+                semaine,
+                salle_id=salle.pk,
+                utilisateur=utilisateur,
+                filtres={key: value for key, value in filtres.items() if key != "salle_id"},
+            ),
         }
         for salle in salles.order_by("site", "nom")
     ]

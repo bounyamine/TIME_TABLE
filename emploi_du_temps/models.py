@@ -14,10 +14,22 @@ class Utilisateur(AbstractUser):
         ENSEIGNANT = "ENSEIGNANT", "Enseignant"
         ETUDIANT = "ETUDIANT", "Étudiant"
 
+    NIVEAU_CHOICES = (
+        (3, "Niveau 3"),
+        (4, "Niveau 4"),
+        (5, "Niveau 5"),
+    )
+
     email = models.EmailField(unique=True)
     nom = models.CharField(max_length=150)
     prenom = models.CharField(max_length=150)
     role = models.CharField(max_length=20, choices=Role.choices)
+    niveau = models.PositiveSmallIntegerField(
+        "niveau de l’étudiant",
+        choices=NIVEAU_CHOICES,
+        null=True,
+        blank=True,
+    )
     option = models.ForeignKey(
         "Option",
         on_delete=models.PROTECT,
@@ -41,15 +53,25 @@ class Utilisateur(AbstractUser):
             raise ValidationError(
                 "Seuls les utilisateurs étudiants peuvent être rattachés à une option."
             )
+        if self.role != self.Role.ETUDIANT and self.niveau:
+            raise ValidationError(
+                "Seuls les utilisateurs étudiants peuvent être rattachés à un niveau."
+            )
+        if self.role == self.Role.ETUDIANT and not self.niveau:
+            raise ValidationError("Le niveau est obligatoire pour un étudiant.")
 
     def consulterEmploiDuTemps(self):
         emplois = EmploiDuTemps.objects.filter(statut=EmploiDuTemps.Statut.PUBLIE)
         if self.role == self.Role.ENSEIGNANT:
             return emplois.filter(creneaux__enseignant=self).distinct()
-        if self.role == self.Role.ETUDIANT and self.option_id:
-            return emplois.filter(
-                Q(creneaux__option=self.option) | Q(creneaux__options=self.option)
-            ).distinct()
+        if self.role == self.Role.ETUDIANT:
+            if self.option_id and self.niveau:
+                return emplois.filter(
+                    Q(creneaux__option=self.option) | Q(creneaux__options=self.option)
+                ).filter(
+                    creneaux__niveau=self.niveau
+                ).distinct()
+            return emplois.none()
         return emplois
 
     def __str__(self) -> str:
@@ -88,27 +110,16 @@ class Etudiant(Utilisateur):
 
 class Option(models.Model):
 
+    sigle = models.CharField(max_length=10, unique=True)
     nom = models.CharField(max_length=150, unique=True)
-    niveau = models.PositiveIntegerField()
 
     class Meta:
-        ordering = ["niveau", "nom"]
+        ordering = ["sigle"]
         verbose_name = "option"
         verbose_name_plural = "options"
 
     def __str__(self) -> str:
-        return f"{self.nom} - niveau {self.niveau}"
-
-    @property
-    def sigle(self) -> str:
-        sigles = {
-            "Sécurité et Cryptographie": "SEC",
-            "Réseaux et Télécommunications": "RTE",
-            "Data Science": "DSC",
-            "Génie Logiciel": "GLO",
-            "Informatique et Télécommunications": "ITE",
-        }
-        return sigles.get(self.nom, self.nom)
+        return f"{self.sigle} - {self.nom}"
 
 class UE(models.Model):
     codeUE = models.CharField("code UE", max_length=30, primary_key=True)
@@ -132,6 +143,11 @@ class Cours(models.Model):
     codeCours = models.CharField("code du cours", max_length=30, editable=False)
     intitule = models.CharField("intitulé du cours", max_length=200)
     volumeHoraire = models.CharField("volume horaire", max_length=100, blank=True)
+    niveau = models.PositiveSmallIntegerField(
+        "niveau",
+        choices=Utilisateur.NIVEAU_CHOICES,
+        default=4,
+    )
     status = models.BooleanField("actif", default=True)
     option = models.ForeignKey(
         Option,
@@ -147,7 +163,7 @@ class Cours(models.Model):
     )
 
     class Meta:
-        ordering = ["codeCours", "intitule"]
+        ordering = ["niveau", "codeCours", "intitule"]
         verbose_name = "cours"
         verbose_name_plural = "cours"
 
@@ -283,6 +299,11 @@ class Creneau(models.Model):
     jour = models.CharField("jour", max_length=20, choices=Jour.choices)
     heureDebut = models.TimeField("heure de début")
     heureFin = models.TimeField("heure de fin")
+    niveau = models.PositiveSmallIntegerField(
+        "niveau",
+        choices=Utilisateur.NIVEAU_CHOICES,
+        default=4,
+    )
     cours = models.ForeignKey(
         Cours,
         on_delete=models.PROTECT,
@@ -322,7 +343,8 @@ class Creneau(models.Model):
             options = self.cours.options_effectives
         if not options and self.option_id:
             options = [self.option]
-        return ", ".join(option.sigle for option in options)
+        sigles = ", ".join(option.sigle for option in options)
+        return f"{sigles} - Niveau {self.niveau}" if sigles else f"Niveau {self.niveau}"
 
     @property
     def reference_affichage(self) -> str:
@@ -349,6 +371,8 @@ class Creneau(models.Model):
 
     def clean(self) -> None:
         super().clean()
+        if self.cours_id:
+            self.niveau = self.cours.niveau
         if self.heureDebut and self.heureFin and self.heureDebut >= self.heureFin:
             raise ValidationError("L'heure de début doit être avant l'heure de fin.")
 
@@ -360,6 +384,7 @@ class Creneau(models.Model):
             self.salle_id,
             self.enseignant_id,
             self.cours_id,
+            self.niveau,
         ]
         if not all(champs_requis):
             return
@@ -384,6 +409,8 @@ class Creneau(models.Model):
         if not option_ids and option:
             option_ids = [option.pk]
         if option_ids and chevauchements.filter(
+            niveau=self.niveau,
+        ).filter(
             Q(option_id__in=option_ids) | Q(options__in=option_ids)
         ).distinct().exists():
             raise ValidationError("Cette option a déjà un cours sur ce créneau.")
@@ -392,6 +419,11 @@ class Creneau(models.Model):
         """Affecter le créneau après validation des conflits."""
         self.full_clean()
         self.save()
+
+    def save(self, *args, **kwargs):
+        if self.cours_id:
+            self.niveau = self.cours.niveau
+        super().save(*args, **kwargs)
 
     def deplacer(self, jour: str, heureDebut, heureFin) -> None:
         """Déplacer le créneau puis valider les conflits."""

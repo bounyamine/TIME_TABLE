@@ -51,16 +51,18 @@
           <th>Code</th>
           <th>Intitulé du cours</th>
           <th>Options</th>
+          <th>Niveau</th>
           <th>Statut</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for c in cours %}
-        <tr class="clickable-row" data-resource-row data-modal-edit="true" data-href="{% url 'cours_modifier' c.pk %}" data-title="Modifier le cours" data-subtitle="{{ c.intitule }}" data-field-ue="{{ c.ue_id }}" data-field-codeCours="{{ c.codeCours }}" data-field-intitule="{{ c.intitule }}" data-field-volumeHoraire="{{ c.volumeHoraire }}" data-field-options="{{ c.option_ids_csv }}" tabindex="0" role="link" aria-label="Modifier le cours {{ c.intitule }}">
+        <tr class="clickable-row" data-resource-row data-modal-edit="true" data-href="{% url 'cours_modifier' c.pk %}" data-title="Modifier le cours" data-subtitle="{{ c.intitule }}" data-field-ue="{{ c.ue_id }}" data-field-codeCours="{{ c.codeCours }}" data-field-intitule="{{ c.intitule }}" data-field-volumeHoraire="{{ c.volumeHoraire }}" data-field-niveau="{{ c.niveau }}" data-field-options="{{ c.option_ids_csv }}" tabindex="0" role="link" aria-label="Modifier le cours {{ c.intitule }}">
           <td><span class="badge badge-blue">{{ c.codeCours }}</span></td>
           <td>{{ c.intitule }}</td>
           <td><span class="badge badge-green">{{ c.options_affichage }}</span></td>
+          <td><span class="badge badge-gray">Niveau {{ c.niveau }}</span></td>
           <td>
             <form class="status-toggle-form" method="post" action="{% url 'cours_basculer_statut' c.pk %}" data-row-ignore>
               {% csrf_token %}
@@ -140,11 +142,20 @@
           <label class="form-label" for="modalOptions">Options <span class="form-required">*</span></label>
           <select class="form-control" id="modalOptions" name="options" multiple required>
             {% for o in options %}
-            <option value="{{ o.pk }}">{{ o.nom }} — Niveau {{ o.niveau }}</option>
+            <option value="{{ o.pk }}">{{ o.sigle }} — {{ o.nom }}</option>
             {% endfor %}
           </select>
           <p class="form-hint">Maintenez Ctrl ou Cmd pour choisir plusieurs options.</p>
         </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="modalNiveau">Niveau <span class="form-required">*</span></label>
+        <select class="form-control" id="modalNiveau" name="niveau" required>
+          <option value="">-- Sélectionner un niveau --</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
       </div>
       <div class="form-group">
         <label class="form-label" for="modalIntitule">Intitulé du cours <span class="form-required">*</span></label>

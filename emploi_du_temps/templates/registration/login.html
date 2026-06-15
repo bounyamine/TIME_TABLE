@@ -142,14 +142,14 @@
 
       <div class="form-group">
         <label class="form-label" for="id_username">
-          <i class="ti ti-user"></i> Nom d'utilisateur <span class="form-required">*</span>
+          <i class="ti ti-user"></i> Nom d'utilisateur ou email <span class="form-required">*</span>
         </label>
         <input
           type="text"
           id="id_username"
           name="username"
           class="form-control"
-          placeholder="Ex : bouny"
+          placeholder="Ex : bouny ou bouny@enspm.cm"
           autocomplete="username"
           autofocus
           value="{{ form.username.value|default:'' }}"

@@ -29,11 +29,10 @@ SEMAINE_EDT = date(2026, 6, 8)
 
 
 OPTIONS = {
-    "SEC": {"nom": "Sécurité et Cryptographie", "niveau": 4},
-    "RTE": {"nom": "Réseaux et Télécommunications", "niveau": 4},
-    "DSC": {"nom": "Data Science", "niveau": 4},
-    "GLO": {"nom": "Génie Logiciel", "niveau": 4},
-    "ITE": {"nom": "Informatique et Télécommunications", "niveau": 3},
+    "GLO": {"nom": "Génie Logiciel"},
+    "DSC": {"nom": "Data Science"},
+    "SEC": {"nom": "Sécurité et Cryptographie"},
+    "RTE": {"nom": "Réseaux et Télécommunications"},
 }
 
 
@@ -52,13 +51,6 @@ SALLES = [
 # Un cours peut appartenir à une ou plusieurs options.
 # "option_principale" = première option de la liste, gardée pour compatibilité avec l'ancien modèle.
 COURS = [
-    # ITE niveau 3
-    {"code": "ITE345", "ue": "Réseaux Locaux et Interconnexion", "cours": "Réseaux Locaux et Interconnexion", "options": ["ITE"]},
-    {"code": "ITE345", "ue": "Logiques et Électronique Programmable", "cours": "Logiques et Électronique Programmable", "options": ["ITE"]},
-    {"code": "ITE325", "ue": "Architecture des Ordinateurs et SI", "cours": "Architecture des Ordinateurs et SI", "options": ["ITE"]},
-    {"code": "ITE355", "ue": "Logique Formelle", "cours": "Logique Formelle", "options": ["ITE"]},
-    {"code": "ITE315", "ue": "Programmation Orientée Objet", "cours": "Programmation Orientée Objet", "options": ["ITE"]},
-
     # GLO
     {"code": "GLO346", "ue": "Modélisation Informatique", "cours": "Modélisation Informatique", "options": ["GLO"]},
     {"code": "GLO417", "ue": "IOT - Présentation des Projets", "cours": "IOT (Présentation des Projets)", "options": ["GLO"]},
@@ -122,21 +114,18 @@ ENSEIGNANTS = [
 
 
 ETUDIANTS = [
-    {"username": "glo.ngono", "nom": "Ngono", "prenom": "Patrick", "email": "patrick.ngono@enspm.cm", "option": "GLO"},
-    {"username": "glo.mballa", "nom": "Mballa", "prenom": "Ariane", "email": "ariane.mballa@enspm.cm", "option": "GLO"},
-    {"username": "glo.essomba", "nom": "Essomba", "prenom": "Joël", "email": "joel.essomba@enspm.cm", "option": "GLO"},
-    {"username": "rte.abate", "nom": "Abate", "prenom": "Kevin", "email": "kevin.abate@enspm.cm", "option": "RTE"},
-    {"username": "rte.zra", "nom": "Zra", "prenom": "Nadine", "email": "nadine.zra@enspm.cm", "option": "RTE"},
-    {"username": "rte.hamadou", "nom": "Hamadou", "prenom": "Ibrahim", "email": "ibrahim.hamadou@enspm.cm", "option": "RTE"},
-    {"username": "sec.manga", "nom": "Manga", "prenom": "Esther", "email": "esther.manga@enspm.cm", "option": "SEC"},
-    {"username": "sec.biloa", "nom": "Biloa", "prenom": "Junior", "email": "junior.biloa@enspm.cm", "option": "SEC"},
-    {"username": "sec.ndongo", "nom": "Ndongo", "prenom": "Clarisse", "email": "clarisse.ndongo@enspm.cm", "option": "SEC"},
-    {"username": "dsc.talla", "nom": "Talla", "prenom": "Grâce", "email": "grace.talla@enspm.cm", "option": "DSC"},
-    {"username": "dsc.kamga", "nom": "Kamga", "prenom": "Loïc", "email": "loic.kamga@enspm.cm", "option": "DSC"},
-    {"username": "dsc.fotso", "nom": "Fotso", "prenom": "Mireille", "email": "mireille.fotso@enspm.cm", "option": "DSC"},
-    {"username": "ite.belinga", "nom": "Belinga", "prenom": "Marc", "email": "marc.belinga@enspm.cm", "option": "ITE"},
-    {"username": "ite.ngassa", "nom": "Ngassa", "prenom": "Sylvie", "email": "sylvie.ngassa@enspm.cm", "option": "ITE"},
-    {"username": "ite.oumarou", "nom": "Oumarou", "prenom": "Said", "email": "said.oumarou@enspm.cm", "option": "ITE"},
+    {"username": "glo.ngono", "nom": "Ngono", "prenom": "Patrick", "email": "patrick.ngono@enspm.cm", "option": "GLO", "niveau": 4},
+    {"username": "glo.mballa", "nom": "Mballa", "prenom": "Ariane", "email": "ariane.mballa@enspm.cm", "option": "GLO", "niveau": 4},
+    {"username": "glo.essomba", "nom": "Essomba", "prenom": "Joël", "email": "joel.essomba@enspm.cm", "option": "GLO", "niveau": 4},
+    {"username": "rte.abate", "nom": "Abate", "prenom": "Kevin", "email": "kevin.abate@enspm.cm", "option": "RTE", "niveau": 4},
+    {"username": "rte.zra", "nom": "Zra", "prenom": "Nadine", "email": "nadine.zra@enspm.cm", "option": "RTE", "niveau": 4},
+    {"username": "rte.hamadou", "nom": "Hamadou", "prenom": "Ibrahim", "email": "ibrahim.hamadou@enspm.cm", "option": "RTE", "niveau": 4},
+    {"username": "sec.manga", "nom": "Manga", "prenom": "Esther", "email": "esther.manga@enspm.cm", "option": "SEC", "niveau": 4},
+    {"username": "sec.biloa", "nom": "Biloa", "prenom": "Junior", "email": "junior.biloa@enspm.cm", "option": "SEC", "niveau": 4},
+    {"username": "sec.ndongo", "nom": "Ndongo", "prenom": "Clarisse", "email": "clarisse.ndongo@enspm.cm", "option": "SEC", "niveau": 4},
+    {"username": "dsc.talla", "nom": "Talla", "prenom": "Grâce", "email": "grace.talla@enspm.cm", "option": "DSC", "niveau": 4},
+    {"username": "dsc.kamga", "nom": "Kamga", "prenom": "Loïc", "email": "loic.kamga@enspm.cm", "option": "DSC", "niveau": 4},
+    {"username": "dsc.fotso", "nom": "Fotso", "prenom": "Mireille", "email": "mireille.fotso@enspm.cm", "option": "DSC", "niveau": 4},
 ]
 
 
@@ -152,12 +141,8 @@ CRENEAUX = [
     # INFOTEL & ENREN
     {"salle": ("Campus de Sékandé", "INFOTEL & ENREN"), "jour": Creneau.Jour.LUNDI, "debut": "07:30", "fin": "09:30", "cours": ("COM356", "Sécurité des Systèmes d'Informations"), "enseignant": "boudjou"},
     {"salle": ("Campus de Sékandé", "INFOTEL & ENREN"), "jour": Creneau.Jour.LUNDI, "debut": "09:30", "fin": "11:30", "cours": ("COM356", "Sécurité des Systèmes d'Informations"), "enseignant": "boudjou"},
-    {"salle": ("Campus de Sékandé", "INFOTEL & ENREN"), "jour": Creneau.Jour.MARDI, "debut": "07:30", "fin": "09:30", "cours": ("ITE355", "Logique Formelle"), "enseignant": "awe.s"},
-    {"salle": ("Campus de Sékandé", "INFOTEL & ENREN"), "jour": Creneau.Jour.MARDI, "debut": "09:30", "fin": "11:30", "cours": ("ITE355", "Logique Formelle"), "enseignant": "awe.s"},
     {"salle": ("Campus de Sékandé", "INFOTEL & ENREN"), "jour": Creneau.Jour.VENDREDI, "debut": "07:30", "fin": "09:30", "cours": ("COM356", "Sécurité des Systèmes d'Informations"), "enseignant": "boudjou"},
     {"salle": ("Campus de Sékandé", "INFOTEL & ENREN"), "jour": Creneau.Jour.VENDREDI, "debut": "09:30", "fin": "11:30", "cours": ("COM356", "Sécurité des Systèmes d'Informations"), "enseignant": "boudjou"},
-    {"salle": ("Campus de Sékandé", "INFOTEL & ENREN"), "jour": Creneau.Jour.LUNDI, "debut": "11:30", "fin": "13:30", "cours": ("ITE345", "Logiques et Électronique Programmable"), "enseignant": "awe.t"},
-    {"salle": ("Campus de Sékandé", "INFOTEL & ENREN"), "jour": Creneau.Jour.LUNDI, "debut": "14:00", "fin": "16:00", "cours": ("ITE345", "Logiques et Électronique Programmable"), "enseignant": "awe.t"},
     {"salle": ("Campus de Sékandé", "INFOTEL & ENREN"), "jour": Creneau.Jour.MARDI, "debut": "11:30", "fin": "13:30", "cours": ("GLO428", "Administration Base de Données"), "enseignant": "mamai"},
     {"salle": ("Campus de Sékandé", "INFOTEL & ENREN"), "jour": Creneau.Jour.JEUDI, "debut": "11:30", "fin": "13:30", "cours": ("SEC346", "Spécialisation en Cryptographie"), "enseignant": "boudjou"},
     {"salle": ("Campus de Sékandé", "INFOTEL & ENREN"), "jour": Creneau.Jour.JEUDI, "debut": "14:00", "fin": "16:00", "cours": ("SEC346", "Spécialisation en Cryptographie"), "enseignant": "boudjou"},
@@ -203,6 +188,13 @@ def parse_time(value):
     return time(int(hour), int(minute))
 
 
+def niveau_depuis_code(code):
+    chiffres = "".join(char for char in code if char.isdigit())
+    if chiffres and int(chiffres[0]) in (3, 4, 5):
+        return int(chiffres[0])
+    return 4
+
+
 def sync_options(cours, option_objects):
     cours.options.set(option_objects)
 
@@ -212,8 +204,8 @@ def seed_options():
     created_options = {}
     for sigle, data in OPTIONS.items():
         option, created = Option.objects.update_or_create(
-            nom=data["nom"],
-            defaults={"niveau": data["niveau"]},
+            sigle=sigle,
+            defaults={"nom": data["nom"]},
         )
         created_options[sigle] = option
         print(f"  {'[CRÉÉ]  ' if created else '[OK]    '} {sigle} - {option.nom}")
@@ -243,11 +235,13 @@ def seed_cours(options):
             defaults={"intituleUE": data["ue"]},
         )
         course_options = [options[sigle] for sigle in data["options"]]
+        niveau = data.get("niveau", niveau_depuis_code(data["code"]))
         cours, created = Cours.objects.update_or_create(
             ue=ue,
             intitule=data["cours"],
             defaults={
                 "volumeHoraire": data.get("vh", VH_STD),
+                "niveau": niveau,
                 "option": course_options[0],
                 "status": data.get("status", True),
             },
@@ -303,6 +297,7 @@ def seed_etudiants(options):
                 "prenom": data["prenom"],
                 "role": Utilisateur.Role.ETUDIANT,
                 "option": option,
+                "niveau": data["niveau"],
             },
         )
         changed = False
@@ -315,6 +310,9 @@ def seed_etudiants(options):
             changed = True
         if user.option_id != option.pk:
             user.option = option
+            changed = True
+        if user.niveau != data["niveau"]:
+            user.niveau = data["niveau"]
             changed = True
         if created:
             user.set_password(PASSWORD)
@@ -370,6 +368,7 @@ def seed_emploi_du_temps(courses, salles, teachers, cd_user):
             enseignant=teachers[data["enseignant"]],
             salle=salles[data["salle"]],
             option=cours.option,
+            niveau=cours.niveau,
         )
         creneau.options.set(cours.options_effectives)
 

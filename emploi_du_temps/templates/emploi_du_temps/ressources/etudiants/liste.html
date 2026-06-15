@@ -52,13 +52,14 @@
           <th>Identifiant</th>
           <th>Email</th>
           <th>Option</th>
+          <th>Niveau</th>
           <th>Statut</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for e in etudiants %}
-        <tr class="clickable-row" data-resource-row data-modal-edit="true" data-href="{% url 'etudiant_modifier' e.pk %}" data-title="Modifier l'étudiant" data-subtitle="{{ e.nom }} {{ e.prenom }}" data-field-nom="{{ e.nom }}" data-field-prenom="{{ e.prenom }}" data-field-email="{{ e.email }}" data-field-option="{{ e.option_id|default:'' }}" data-field-is_active="{% if e.is_active %}1{% else %}0{% endif %}" tabindex="0" role="link" aria-label="Modifier l'étudiant {{ e.nom }} {{ e.prenom }}">
+        <tr class="clickable-row" data-resource-row data-modal-edit="true" data-href="{% url 'etudiant_modifier' e.pk %}" data-title="Modifier l'étudiant" data-subtitle="{{ e.nom }} {{ e.prenom }}" data-field-nom="{{ e.nom }}" data-field-prenom="{{ e.prenom }}" data-field-email="{{ e.email }}" data-field-option="{{ e.option_id|default:'' }}" data-field-niveau="{{ e.niveau|default:'' }}" data-field-is_active="{% if e.is_active %}1{% else %}0{% endif %}" tabindex="0" role="link" aria-label="Modifier l'étudiant {{ e.nom }} {{ e.prenom }}">
           <td class="td-bold">{{ e.nom }} {{ e.prenom }}</td>
           <td><span class="badge badge-gray">{{ e.username }}</span></td>
           <td class="td-muted">{{ e.email }}</td>
@@ -67,6 +68,13 @@
               <span class="badge badge-blue">{{ e.option.nom }}</span>
             {% else %}
               <span class="badge badge-gray">Non renseignée</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if e.niveau %}
+              <span class="badge badge-gray">Niveau {{ e.niveau }}</span>
+            {% else %}
+              <span class="badge badge-gray">Non renseigné</span>
             {% endif %}
           </td>
           <td>
@@ -143,10 +151,19 @@
           <select class="form-control" id="modalOption" name="option" required>
             <option value="">-- Sélectionner une option --</option>
             {% for option in options %}
-            <option value="{{ option.pk }}">{{ option.nom }} — Niveau {{ option.niveau }}</option>
+            <option value="{{ option.pk }}">{{ option.sigle }} — {{ option.nom }}</option>
             {% endfor %}
           </select>
         </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="modalNiveau">Niveau <span class="form-required">*</span></label>
+        <select class="form-control" id="modalNiveau" name="niveau" required>
+          <option value="">-- Sélectionner un niveau --</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
       </div>
       <div class="form-row" data-create-only>
         <div class="form-group">

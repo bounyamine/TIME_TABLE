@@ -10,7 +10,7 @@
       <p class="page-sub">Gérez les filières du département</p>
     </div>
   </div>
-  <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'option_creer' %}" data-title="Nouvelle option" data-subtitle="Ajoutez une filière et son niveau">
+  <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'option_creer' %}" data-title="Nouvelle option" data-subtitle="Ajoutez une filière">
     <i class="ti ti-plus"></i> Nouvelle option
   </button>
 </div>
@@ -24,17 +24,17 @@
     <table class="resource-table resource-table-options">
       <thead>
         <tr>
+          <th>Sigle</th>
           <th>Nom</th>
-          <th>Niveau</th>
           <th>Nb cours</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for o in options %}
-        <tr class="clickable-row" data-resource-row data-modal-edit="true" data-href="{% url 'option_modifier' o.pk %}" data-title="Modifier l'option" data-subtitle="{{ o.nom }}" data-field-nom="{{ o.nom }}" data-field-niveau="{{ o.niveau }}" tabindex="0" role="link" aria-label="Modifier l'option {{ o.nom }}">
+        <tr class="clickable-row" data-resource-row data-modal-edit="true" data-href="{% url 'option_modifier' o.pk %}" data-title="Modifier l'option" data-subtitle="{{ o.nom }}" data-field-sigle="{{ o.sigle }}" data-field-nom="{{ o.nom }}" tabindex="0" role="link" aria-label="Modifier l'option {{ o.nom }}">
+          <td><span class="badge badge-blue">{{ o.sigle }}</span></td>
           <td class="td-bold">{{ o.nom }}</td>
-          <td><span class="badge badge-blue">Niveau {{ o.niveau }}</span></td>
           <td><span class="badge badge-green"><span class="dot"></span>{{ o.cours.count }} cours</span></td>
           <td>
             <div class="td-actions td-actions-icon">
@@ -54,7 +54,7 @@
     <div class="empty-ico"><i class="ti ti-award"></i></div>
     <h3 class="empty-title">Aucune option</h3>
     <p class="empty-text">Ajoutez les filières proposées par le département.</p>
-    <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'option_creer' %}" data-title="Nouvelle option" data-subtitle="Ajoutez une filière et son niveau">
+    <button type="button" class="btn btn-success" data-resource-create data-create-url="{% url 'option_creer' %}" data-title="Nouvelle option" data-subtitle="Ajoutez une filière">
       <i class="ti ti-plus"></i> Ajouter une option
     </button>
   </div>
@@ -74,12 +74,12 @@
     <form id="resourceForm" class="resource-modal-body" method="post" action="{% url 'option_creer' %}">
       {% csrf_token %}
       <div class="form-group">
-        <label class="form-label" for="modalNom">Nom de l'option <span class="form-required">*</span></label>
-        <input class="form-control" type="text" id="modalNom" name="nom" placeholder="Ex : Informatique et Télécommunications" required>
+        <label class="form-label" for="modalSigle">Sigle <span class="form-required">*</span></label>
+        <input class="form-control" type="text" id="modalSigle" name="sigle" maxlength="10" placeholder="Ex : GLO" required>
       </div>
       <div class="form-group">
-        <label class="form-label" for="modalNiveau">Niveau <span class="form-required">*</span></label>
-        <input class="form-control" type="number" id="modalNiveau" name="niveau" min="1" max="5" placeholder="Ex : 1, 2, 3..." required>
+        <label class="form-label" for="modalNom">Nom de l'option <span class="form-required">*</span></label>
+        <input class="form-control" type="text" id="modalNom" name="nom" placeholder="Ex : Génie Logiciel" required>
       </div>
       <div class="resource-modal-actions">
         <button type="button" class="btn btn-secondary" data-resource-modal-close>Annuler</button>

@@ -59,30 +59,13 @@ def construire_grille_semaine(
     semaine: date,
     salle_id: int | None = None,
     utilisateur=None,
+    filtres: dict | None = None,
 ) -> list[dict]:
-    """Grille hebdomadaire d'une salle donnée, filtrée selon le rôle utilisateur."""
-    qs = Creneau.objects.filter(
-        emploiDuTemps__semaine=semaine,
-    ).select_related(
-        "cours__ue", "cours", "enseignant", "salle", "option", "emploiDuTemps"
-    ).prefetch_related("options", "cours__options")
-
-    if utilisateur and utilisateur.is_authenticated:
-        if utilisateur.role == utilisateur.Role.ENSEIGNANT:
-            qs = qs.filter(emploiDuTemps__statut=EmploiDuTemps.Statut.PUBLIE, enseignant=utilisateur)
-        elif utilisateur.role == utilisateur.Role.ETUDIANT:
-            qs = qs.filter(emploiDuTemps__statut=EmploiDuTemps.Statut.PUBLIE)
-            if utilisateur.option_id:
-                qs = qs.filter(
-                    Q(option=utilisateur.option) | Q(options=utilisateur.option)
-                ).distinct()
-            else:
-                qs = qs.none()
-        elif utilisateur.role != utilisateur.Role.CD:
-            qs = qs.none()
-
+    """Grille hebdomadaire, limitée aux créneaux autorisés puis aux filtres choisis."""
+    filtres = dict(filtres or {})
     if salle_id:
-        qs = qs.filter(salle_id=salle_id)
+        filtres["salle_id"] = salle_id
+    qs = creneaux_visibles_semaine(semaine, utilisateur, filtres=filtres)
 
     creneaux_par_cellule: dict[tuple, list] = {}
     for c in qs:
@@ -105,3 +88,34 @@ def construire_grille_semaine(
             })
         lignes.append({"plage": plage, "pause": False, "cellules": cellules})
     return lignes
+
+
+def appliquer_filtres_creneaux(qs, filtres: dict | None = None):
+    filtres = filtres or {}
+    if filtres.get("salle_id"):
+        qs = qs.filter(salle_id=filtres["salle_id"])
+    if filtres.get("enseignant_id"):
+        qs = qs.filter(enseignant_id=filtres["enseignant_id"])
+    if filtres.get("option_id"):
+        qs = qs.filter(Q(option_id=filtres["option_id"]) | Q(options__id=filtres["option_id"]))
+    if filtres.get("niveau"):
+        qs = qs.filter(niveau=filtres["niveau"])
+    return qs.distinct()
+
+
+def creneaux_visibles_semaine(semaine: date, utilisateur=None, filtres: dict | None = None):
+    qs = Creneau.objects.filter(
+        emploiDuTemps__semaine=semaine,
+    ).select_related(
+        "cours__ue", "cours", "enseignant", "salle", "option", "emploiDuTemps"
+    ).prefetch_related("options", "cours__options")
+
+    if utilisateur and utilisateur.is_authenticated:
+        if utilisateur.role == utilisateur.Role.ENSEIGNANT:
+            qs = qs.filter(emploiDuTemps__statut=EmploiDuTemps.Statut.PUBLIE)
+        elif utilisateur.role == utilisateur.Role.ETUDIANT:
+            qs = qs.filter(emploiDuTemps__statut=EmploiDuTemps.Statut.PUBLIE)
+        elif utilisateur.role != utilisateur.Role.CD:
+            qs = qs.none()
+
+    return appliquer_filtres_creneaux(qs, filtres)

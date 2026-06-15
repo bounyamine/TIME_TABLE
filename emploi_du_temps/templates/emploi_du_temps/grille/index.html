@@ -54,86 +54,93 @@
       {% endfor %}
       {% endwith %}
     {% endif %}
-
-    <!-- Exports -->
-    <div style="position:relative;display:inline-block;" id="exportMenu">
-      <button class="btn btn-secondary" onclick="document.getElementById('exportDropdown').classList.toggle('show')">
-        <i class="ti ti-download"></i> Exporter <i class="ti ti-chevron-down" style="font-size:11px;"></i>
-      </button>
-      <div id="exportDropdown" class="dropdown-menu" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1px solid var(--gray-200);border-radius:10px;box-shadow:var(--shadow-md);min-width:200px;z-index:100;overflow:hidden;">
-        <a href="{% url 'grille_edt_semaine' semaine|date:'Y-m-d' %}?export=pdf" class="dropdown-item">
-          <i class="ti ti-file-type-pdf" style="color:#e74c3c;"></i> Exporter le PDF global
-        </a>
-        <a href="{% url 'grille_edt_semaine' semaine|date:'Y-m-d' %}?export=imprimer&salle_id={{ salle_id_actif|default:'' }}" class="dropdown-item" target="_blank">
-          <i class="ti ti-printer" style="color:var(--blue);"></i> Version imprimable
-        </a>
-      </div>
-    </div>
     {% endif %}
+
+    <a href="{{ export_url }}" class="btn btn-secondary">
+      <i class="ti ti-file-type-pdf"></i> Télécharger le PDF
+    </a>
   </div>
 </div>
 
 <div class="edt-command-row">
 <!-- ── Navigation semaines ── -->
-<div class="edt-controls" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding:12px 14px;background:var(--gray-50);border-radius:12px;border:1px solid var(--gray-200);">
-  <a href="/emplois-du-temps/grille/{{ semaine_prev|date:'Y-m-d' }}/{% if salle_id_actif %}?salle_id={{ salle_id_actif }}{% endif %}" class="btn btn-secondary btn-sm">
-    <i class="ti ti-chevron-left"></i> <span class="edt-nav-label">Préc.</span>
-  </a>
+<div class="edt-controls">
+  <div class="edt-week-nav" aria-label="Navigation des semaines">
+    <a href="{% url 'grille_edt_semaine' semaine_prev|date:'Y-m-d' %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" class="btn btn-secondary btn-sm edt-week-btn">
+      <i class="ti ti-chevron-left"></i> <span class="edt-nav-label">Préc.</span>
+    </a>
 
-  <input type="week" id="semaineInput" class="form-control edt-week-input" style="width:180px;display:inline-block;"
-         data-semaine="{{ semaine|date:'Y-m-d' }}"
-         onchange="allerSemaine(this.value)">
+    <input type="week" id="semaineInput" class="form-control edt-week-input"
+           data-semaine="{{ semaine|date:'Y-m-d' }}"
+           onchange="allerSemaine(this.value)">
 
-  <a href="/emplois-du-temps/grille/{{ semaine_next|date:'Y-m-d' }}/{% if salle_id_actif %}?salle_id={{ salle_id_actif }}{% endif %}" class="btn btn-secondary btn-sm">
-    <span class="edt-nav-label">Suiv.</span> <i class="ti ti-chevron-right"></i>
-  </a>
+    <a href="{% url 'grille_edt_semaine' semaine_next|date:'Y-m-d' %}{% if navigation_query %}?{{ navigation_query }}{% endif %}" class="btn btn-secondary btn-sm edt-week-btn">
+      <span class="edt-nav-label">Suiv.</span> <i class="ti ti-chevron-right"></i>
+    </a>
 
-  {% if semaines_dispo %}
-  <select class="form-control edt-week-select" style="width:210px;display:inline-block;"
-          onchange="if(this.value) window.location='/emplois-du-temps/grille/'+this.value+'/{% if salle_id_actif %}?salle_id={{ salle_id_actif }}{% endif %}'">
-    <option value="">— Semaines planifiées —</option>
-    {% for sd in semaines_dispo %}
-    <option value="{{ sd|date:'Y-m-d' }}" {% if sd == semaine %}selected{% endif %}>
-      Sem. du {{ sd|date:"d/m/Y" }}
-    </option>
-    {% endfor %}
-  </select>
-  {% endif %}
+    {% if semaines_dispo %}
+    <select class="form-control edt-week-select" onchange="allerSemaineDate(this.value)">
+      <option value="">Semaines planifiées</option>
+      {% for sd in semaines_dispo %}
+      <option value="{{ sd|date:'Y-m-d' }}" {% if sd == semaine %}selected{% endif %}>
+        Sem. du {{ sd|date:"d/m/Y" }}
+      </option>
+      {% endfor %}
+    </select>
+    {% endif %}
+  </div>
 
-  <!-- ── Filtre salle ── -->
-  <form class="edt-salle-form" method="GET" action="/emplois-du-temps/grille/{{ semaine|date:'Y-m-d' }}/" style="display:flex;align-items:center;">
+  <!-- ── Filtres ── -->
+  <form class="edt-filter-form" method="GET" action="{% url 'grille_edt_semaine' semaine|date:'Y-m-d' %}">
     <div class="salle-select-wrap">
       <i class="ti ti-building salle-select-icon"></i>
       <select name="salle_id" class="salle-select" onchange="this.form.submit()">
+        {% if not est_cd %}
+        <option value="">Salles</option>
+        {% endif %}
         {% for s in salles %}
         <option value="{{ s.pk }}" {% if salle_id_actif == s.pk %}selected{% endif %}>{{ s.nom }}</option>
         {% endfor %}
       </select>
       <i class="ti ti-chevron-down salle-select-arrow"></i>
     </div>
+
+    <div class="salle-select-wrap">
+      <i class="ti ti-school salle-select-icon"></i>
+      <select name="option_id" class="salle-select" onchange="this.form.submit()">
+        <option value="">Options</option>
+        {% for option in options_filtre %}
+        <option value="{{ option.pk }}" {% if option_id_actif == option.pk %}selected{% endif %}>{{ option.sigle }}</option>
+        {% endfor %}
+      </select>
+      <i class="ti ti-chevron-down salle-select-arrow"></i>
+    </div>
+
+    <div class="salle-select-wrap">
+      <i class="ti ti-stairs salle-select-icon"></i>
+      <select name="niveau" class="salle-select" onchange="this.form.submit()">
+        <option value="">Niveaux</option>
+        {% for niveau, label in niveaux_filtre %}
+        <option value="{{ niveau }}" {% if niveau_actif == niveau %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <i class="ti ti-chevron-down salle-select-arrow"></i>
+    </div>
+
+    <div class="salle-select-wrap edt-teacher-filter">
+      <i class="ti ti-user salle-select-icon"></i>
+      <select name="enseignant_id" class="salle-select" onchange="this.form.submit()">
+        <option value="">Tous les enseignants</option>
+        {% for enseignant in enseignants_filtre %}
+        <option value="{{ enseignant.pk }}" {% if enseignant_id_actif == enseignant.pk %}selected{% endif %}>
+          {{ enseignant.nom }} {{ enseignant.prenom }}
+        </option>
+        {% endfor %}
+      </select>
+      <i class="ti ti-chevron-down salle-select-arrow"></i>
+    </div>
   </form>
 
-</div>
-
-{% if est_cd %}
-<div class="edt-appbar" aria-label="Actions rapides de la grille">
-  <button type="button" class="edt-tool-btn" id="edtToolEdit" disabled title="Modifier le créneau sélectionné">
-    <i class="ti ti-edit"></i> <span class="edt-tool-label">Modifier</span>
-  </button>
-  <button type="button" class="edt-tool-btn" id="edtToolCopy" disabled title="Ctrl+C">
-    <i class="ti ti-copy"></i> <span class="edt-tool-label">Copier</span>
-  </button>
-  <button type="button" class="edt-tool-btn" id="edtToolCut" disabled title="Ctrl+X">
-    <i class="ti ti-cut"></i> <span class="edt-tool-label">Couper</span>
-  </button>
-  <button type="button" class="edt-tool-btn" id="edtToolPaste" disabled title="Ctrl+V">
-    <i class="ti ti-clipboard"></i> <span class="edt-tool-label">Coller</span>
-  </button>
-  <button type="button" class="edt-tool-btn danger" id="edtToolDelete" disabled title="Suppr">
-    <i class="ti ti-trash"></i> <span class="edt-tool-label">Supprimer</span>
-  </button>
-</div>
-{% endif %}
 </div>
 
 
@@ -194,13 +201,16 @@
               <div class="edt-volume">({{ cr.cours.volumeHoraire }})</div>
               {% endif %}
               <div class="edt-enseignant-line">{{ cr.enseignant.nom }} {{ cr.enseignant.prenom }}</div>
+              {% if not salle_id_actif %}
+              <div class="edt-meta-small"><i class="ti ti-building"></i> {{ cr.salle.nom }}</div>
+              {% endif %}
             </div>
           </div>
           {% empty %}
           {% if est_cd %}
-          <button type="button" class="edt-add-btn" title="Ajouter un créneau ici" data-add-cell-trigger onclick="event.stopPropagation();">
+          <span class="edt-empty-marker" aria-hidden="true">
             <i class="ti ti-plus"></i>
-          </button>
+          </span>
           {% else %}
           <span style="display:block;min-height:50px;"></span>
           {% endif %}
@@ -243,20 +253,24 @@
       <input type="hidden" name="semaine" value="{{ semaine|date:'Y-m-d' }}">
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label" for="quickCours">Cours</label>
-          <select class="form-control" id="quickCours" name="cours" required>
+          <label class="form-label" for="quickCoursSearch">Cours</label>
+          <input class="form-control" type="text" id="quickCoursSearch" list="quickCoursList" autocomplete="off" required>
+          <input type="hidden" id="quickCours" name="cours" required>
+          <datalist id="quickCoursList">
             {% for cours in cours_modal %}
-            <option value="{{ cours.pk }}">{{ cours.codeCours }} — {{ cours.intitule }} ({{ cours.options_affichage }})</option>
+            <option value="{{ cours.intitule }} ({{ cours.options_affichage }}, niveau {{ cours.niveau }})" data-id="{{ cours.pk }}"></option>
             {% endfor %}
-          </select>
+          </datalist>
         </div>
         <div class="form-group">
-          <label class="form-label" for="quickEnseignant">Enseignant</label>
-          <select class="form-control" id="quickEnseignant" name="enseignant" required>
+          <label class="form-label" for="quickEnseignantSearch">Enseignant</label>
+          <input class="form-control" type="text" id="quickEnseignantSearch" list="quickEnseignantList" autocomplete="off" required>
+          <input type="hidden" id="quickEnseignant" name="enseignant" required>
+          <datalist id="quickEnseignantList">
             {% for enseignant in enseignants_modal %}
-            <option value="{{ enseignant.pk }}">{{ enseignant.nom }} {{ enseignant.prenom }}</option>
+            <option value="{{ enseignant.nom }} {{ enseignant.prenom }}" data-id="{{ enseignant.pk }}"></option>
             {% endfor %}
-          </select>
+          </datalist>
         </div>
       </div>
       <div class="form-row">
@@ -361,12 +375,22 @@
 
 <style>
 /* ── Grille ── */
-.edt-command-row{display:flex;align-items:stretch;gap:12px;margin-bottom:14px}
-.edt-command-row .edt-controls{flex:1 1 620px;min-width:0;margin-bottom:0!important}
-.edt-command-row .edt-appbar{flex:0 0 auto;margin-bottom:0}
-.edt-command-row .edt-week-input{width:160px!important}
-.edt-command-row .edt-week-select{width:190px!important}
-.edt-command-row .salle-select-wrap{width:150px;min-width:150px;max-width:200px}
+.edt-command-row{margin-bottom:14px}
+.edt-controls{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:10px;margin-bottom:14px;background:#fff;border:1px solid var(--gray-200);
+  border-radius:10px;box-shadow:var(--shadow-sm);
+}
+.edt-week-nav{display:flex;align-items:center;gap:6px;flex:0 0 auto;min-width:0}
+.edt-week-btn{height:34px;min-height:34px;padding:0 10px;border-radius:7px}
+.edt-command-row .edt-week-input{width:158px!important;height:34px;min-height:34px;font-size:12.5px}
+.edt-command-row .edt-week-select{width:148px!important;height:34px;min-height:34px;font-size:12.5px}
+.edt-filter-form{
+  display:flex;align-items:center;gap:8px;flex:1 1 520px;min-width:280px;
+  padding-left:10px;border-left:1px solid var(--gray-200);flex-wrap:wrap;
+}
+.edt-command-row .salle-select-wrap{width:100px;min-width:100px;max-width:200px;height:34px}
+.edt-command-row .edt-teacher-filter{width:220px;max-width:280px}
 .edt-grid{width:100%;border-collapse:collapse;border:2px solid #000;font-size:13px;min-width:900px}
 .edt-th-horaire{background:#fff;color:#000;border:2px solid #000;font-weight:700;text-align:center;padding:10px 8px;width:110px;font-size:12px;letter-spacing:.5px}
 .edt-th{background:#fff;color:#000;border:2px solid #000;font-weight:700;text-align:center;padding:10px 6px;font-size:12px;letter-spacing:.5px}
@@ -386,9 +410,7 @@
 .edt-enseignant-line{font-size:11px;color:#c51414;font-weight:700;margin-bottom:2px}
 .edt-meta-small{font-size:10px;color:var(--gray-500);line-height:1.5;display:flex;align-items:center;justify-content:center;gap:3px}
 .edt-option-badge{display:inline-block;background:var(--blue-light);color:var(--blue);font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px}
-.edt-add-btn{position:absolute;inset:4px;display:flex;align-items:center;justify-content:center;color:var(--gray-300);font-size:20px;text-decoration:none;border:1.5px dashed var(--gray-200);border-radius:6px;transition:all .15s;background:transparent;cursor:pointer}
-.edt-add-btn:hover{color:#7030a0;border-color:#7030a0;background:#f8f4ff}
-.edt-add-small{min-height:24px;font-size:14px;margin-top:4px}
+.edt-empty-marker{position:absolute;inset:4px;display:flex;align-items:center;justify-content:center;color:var(--gray-300);font-size:20px;border:1.5px dashed var(--gray-200);border-radius:6px;background:transparent;pointer-events:none}
 .edt-pause-row td{border:2px solid #7030a0}
 .edt-pause-horaire{background:#bdd7ee!important;font-size:12px;vertical-align:middle;padding:6px 4px;font-weight:700;text-align:center}
 .edt-pause-cell{background:#bdd7ee!important;font-size:15px;font-weight:900;letter-spacing:3px;color:#1a1a2e;padding:10px;text-align:center}
@@ -420,20 +442,6 @@
 .edt-action-toast button{margin-left:auto;border:0;background:transparent;color:var(--blue);font-weight:800;cursor:pointer;font-family:'Inter',sans-serif}
 .edt-action-toast.error{border-left-color:var(--red);color:var(--red);background:var(--red-light)}
 .edt-action-toast.success{border-left-color:var(--green);color:var(--green-dark);background:var(--green-light)}
-.edt-appbar{
-  display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:14px;
-  padding:8px;border:1px solid var(--gray-200);border-radius:12px;background:#fff;
-  box-shadow:var(--shadow-sm);
-}
-.edt-tool-btn{
-  display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 11px;
-  border:1px solid var(--gray-200);border-radius:8px;background:#fff;color:var(--gray-700);
-  font-family:'Inter',sans-serif;font-size:12px;font-weight:700;cursor:pointer;
-  transition:all .16s;
-}
-.edt-tool-btn:hover:not(:disabled){background:var(--blue-light);border-color:var(--blue-mid);color:var(--blue)}
-.edt-tool-btn:disabled{opacity:.45;cursor:not-allowed}
-.edt-tool-btn.danger:hover:not(:disabled){background:var(--red-light);border-color:#fecaca;color:var(--red)}
 .edt-save-indicator{
   margin-left:auto;display:inline-flex;align-items:center;gap:6px;color:var(--gray-500);
   font-size:12px;font-weight:800;padding:0 6px;
@@ -508,25 +516,20 @@
   z-index:2;font-size:13px;color:var(--gray-400);
   position:absolute;right:8px;pointer-events:none;
 }
-@media(max-width:1320px){
-  .edt-command-row .edt-appbar .edt-tool-btn{width:34px;padding:0;justify-content:center}
-  .edt-command-row .edt-appbar .edt-tool-label{display:none}
-}
 @media(max-width:980px){
-  .edt-command-row{flex-direction:column}
-  .edt-command-row .edt-controls{flex:0 0 auto}
-  .edt-command-row .edt-appbar{width:100%}
-  .edt-command-row .edt-appbar .edt-tool-btn{width:auto;padding:0 11px}
-  .edt-command-row .edt-appbar .edt-tool-label{display:inline}
+  .edt-controls{align-items:stretch}
+  .edt-week-nav{flex:1 1 100%}
+  .edt-filter-form{
+    flex:1 1 100%;padding-left:0;padding-top:8px;
+    border-left:0;border-top:1px solid var(--gray-200);
+  }
 }
 @media(max-width:640px){
   .edt-toolbar-title{align-items:flex-start!important}
   .edt-toolbar-actions{width:100%}
   .edt-toolbar-actions>.btn,
   .edt-toolbar-actions>form,
-  .edt-toolbar-actions>form .btn,
-  .edt-toolbar-actions>#exportMenu,
-  .edt-toolbar-actions>#exportMenu>.btn{
+  .edt-toolbar-actions>form .btn{
     width:100%;
   }
   .edt-toolbar-actions{gap:6px!important}
@@ -537,19 +540,21 @@
     font-size:12px;
     border-radius:8px;
   }
-  #exportDropdown{left:0;right:0;min-width:0!important}
-  .edt-command-row{gap:8px;margin-bottom:10px}
+  .edt-command-row{margin-bottom:10px}
   .edt-controls{
-    display:grid!important;
-    grid-template-columns:38px minmax(0,1fr) 38px;
-    align-items:center!important;
+    display:flex!important;
+    align-items:stretch!important;
     gap:6px!important;
     padding:8px!important;
     border-radius:10px!important;
   }
-  .edt-controls>.btn:first-of-type{grid-column:1}
-  .edt-controls>.btn:last-of-type{grid-column:3}
-  .edt-controls>.btn{
+  .edt-week-nav{
+    display:grid;
+    grid-template-columns:38px minmax(0,1fr) 38px;
+    gap:6px;
+    width:100%;
+  }
+  .edt-week-btn{
     width:38px;
     height:34px;
     min-height:0;
@@ -557,7 +562,7 @@
     justify-content:center;
     border-radius:8px;
   }
-  .edt-controls>.btn i{font-size:15px}
+  .edt-week-btn i{font-size:15px}
   .edt-nav-label{display:none}
   .edt-command-row .edt-week-input,
   .edt-command-row .edt-week-select{
@@ -567,19 +572,21 @@
     font-size:12px;
   }
   .edt-command-row .edt-week-input{
-    grid-column:2;
     width:100%!important;
     max-width:100%;
     min-width:0;
     box-sizing:border-box;
     justify-self:stretch;
   }
-  .edt-command-row .edt-week-select,
-  .edt-command-row .edt-salle-form,
-  .edt-command-row .salle-select-wrap{
+  .edt-command-row .edt-week-select{
     grid-column:1 / -1;
     width:100%!important;
   }
+  .edt-command-row .edt-filter-form,
+  .edt-command-row .salle-select-wrap{
+    width:100%!important;
+  }
+  .edt-command-row .edt-filter-form{min-width:0}
   .edt-command-row .salle-select-wrap{
     height:34px;
     max-width:none;
@@ -596,17 +603,6 @@
   }
   .edt-command-row .salle-select-icon,
   .edt-command-row .salle-select-arrow{font-size:13px}
-  .edt-appbar{
-    gap:5px;
-    padding:6px;
-    border-radius:10px;
-  }
-  .edt-command-row .edt-appbar .edt-tool-btn{
-    height:30px;
-    padding:0 8px;
-    font-size:11px;
-    border-radius:7px;
-  }
   .edt-save-indicator{font-size:11px;padding:0 4px}
   .edt-grid{min-width:760px;font-size:12px}
   .edt-day-cell{min-width:118px}
@@ -623,9 +619,15 @@ function allerSemaine(weekValue) {
   const lundi = new Date(jan4);
   lundi.setDate(jan4.getDate() - dow + 1 + (parseInt(week) - 1) * 7);
   const iso = lundi.toISOString().split('T')[0];
+  allerSemaineDate(iso);
+}
+
+function allerSemaineDate(iso) {
+  if (!iso) return;
   const params = new URLSearchParams(window.location.search);
-  const filtre = params.get('salle_id') ? '?salle_id=' + params.get('salle_id') : '';
-  window.location = '/emplois-du-temps/grille/' + iso + '/' + filtre;
+  params.delete('export');
+  const query = params.toString();
+  window.location = '/emplois-du-temps/grille/' + iso + '/' + (query ? '?' + query : '');
 }
 
 // Initialiser input[type=week]
@@ -639,17 +641,6 @@ function allerSemaine(weekValue) {
   input.value = d.getFullYear() + '-W' + String(week).padStart(2, '0');
 })();
 
-// ── Dropdown export ──────────────────────────────────────────────────────────
-document.addEventListener('click', function(e) {
-  const drop = document.getElementById('exportDropdown');
-  const btn = document.getElementById('exportMenu');
-  if (drop && !btn?.contains(e.target)) drop.classList.remove('show');
-});
-document.getElementById('exportDropdown')?.addEventListener('click', e => e.stopPropagation());
-// show/hide via class
-const style = document.createElement('style');
-style.textContent = '#exportDropdown.show{display:block!important}';
-document.head.appendChild(style);
 </script>
 
 {% if est_cd %}
@@ -682,14 +673,19 @@ document.head.appendChild(style);
   const publishConfirm = document.getElementById('edtPublishConfirm');
   const toolbarAdd = document.getElementById('edtToolbarAdd');
   const saveIndicator = document.getElementById('edtSaveIndicator');
+  const quickCoursSearch = document.getElementById('quickCoursSearch');
+  const quickEnseignantSearch = document.getElementById('quickEnseignantSearch');
+  const quickCoursInput = document.getElementById('quickCours');
+  const quickEnseignantInput = document.getElementById('quickEnseignant');
+  const quickCoursOptions = Array.from(document.querySelectorAll('#quickCoursList option')).map(option => ({
+    id: option.dataset.id,
+    label: option.value
+  }));
+  const quickEnseignantOptions = Array.from(document.querySelectorAll('#quickEnseignantList option')).map(option => ({
+    id: option.dataset.id,
+    label: option.value
+  }));
   let pendingPublishForm = null;
-  const tools = {
-    edit: document.getElementById('edtToolEdit'),
-    copy: document.getElementById('edtToolCopy'),
-    cut: document.getElementById('edtToolCut'),
-    paste: document.getElementById('edtToolPaste'),
-    delete: document.getElementById('edtToolDelete')
-  };
 
   function csrfToken() {
     const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
@@ -752,6 +748,30 @@ document.head.appendChild(style);
     saveIndicator.classList.add(state);
     const icon = state === 'saving' ? 'ti-loader-2' : state === 'error' ? 'ti-alert-circle' : 'ti-circle-check';
     saveIndicator.innerHTML = '<i class="ti ' + icon + '"></i> ' + message;
+  }
+
+  function findAutocompleteOption(options, value) {
+    const normalized = (value || '').trim().toLowerCase();
+    if (!normalized) return null;
+    return options.find(option => option.label.trim().toLowerCase() === normalized) || null;
+  }
+
+  function setAutocompleteValue(searchInput, hiddenInput, options, id) {
+    const option = options.find(item => item.id === String(id || ''));
+    hiddenInput.value = option?.id || '';
+    searchInput.value = option?.label || '';
+  }
+
+  function syncAutocompleteValue(searchInput, hiddenInput, options) {
+    const option = findAutocompleteOption(options, searchInput.value);
+    hiddenInput.value = option?.id || '';
+    return option;
+  }
+
+  function wireAutocomplete(searchInput, hiddenInput, options) {
+    if (!searchInput || !hiddenInput) return;
+    searchInput.addEventListener('input', () => syncAutocompleteValue(searchInput, hiddenInput, options));
+    searchInput.addEventListener('change', () => syncAutocompleteValue(searchInput, hiddenInput, options));
   }
 
   function notify(message, type, action) {
@@ -823,22 +843,10 @@ document.head.appendChild(style);
     button.addEventListener('click', closePublishModal);
   });
 
-  function updateToolbar() {
-    const hasCard = Boolean(selectedCard);
-    const hasCell = Boolean(selectedCell);
-    const hasClipboard = Boolean(clipboard());
-    tools.edit.disabled = !hasCard;
-    tools.copy.disabled = !hasCard;
-    tools.cut.disabled = !hasCard;
-    tools.delete.disabled = !hasCard;
-    tools.paste.disabled = !hasCell || !hasClipboard;
-  }
-
   function selectCell(cell) {
     document.querySelectorAll('.edt-day-cell.is-selected').forEach(item => item.classList.remove('is-selected'));
     selectedCell = cell || null;
     selectedCell?.classList.add('is-selected');
-    updateToolbar();
   }
 
   function selectCard(card) {
@@ -846,7 +854,6 @@ document.head.appendChild(style);
     selectedCard = card || null;
     selectedCard?.classList.add('is-selected');
     selectCell(selectedCard?.closest('.edt-day-cell[data-grid-cell]') || selectedCell);
-    updateToolbar();
   }
 
   function closeMenu() {
@@ -944,14 +951,14 @@ document.head.appendChild(style);
     quickForm.action = card.dataset.editUrl;
     quickTitle.textContent = 'Modifier le créneau';
     quickSubtitle.textContent = card.dataset.title || 'Modification rapide';
-    quickForm.elements.cours.value = card.dataset.coursId || '';
-    quickForm.elements.enseignant.value = card.dataset.enseignantId || '';
+    setAutocompleteValue(quickCoursSearch, quickCoursInput, quickCoursOptions, card.dataset.coursId);
+    setAutocompleteValue(quickEnseignantSearch, quickEnseignantInput, quickEnseignantOptions, card.dataset.enseignantId);
     quickForm.elements.salle.value = card.dataset.salleId || '';
     quickForm.elements.jour.value = card.dataset.jour || '';
     quickForm.elements.plage.value = card.dataset.plage || '';
     quickModal.classList.add('show');
     quickModal.setAttribute('aria-hidden', 'false');
-    quickForm.elements.cours.focus();
+    quickCoursSearch?.focus();
   }
 
   function openQuickAdd(cell) {
@@ -977,7 +984,7 @@ document.head.appendChild(style);
     quickForm.elements.salle.value = payload.salle_id || "{{ salle_id_actif|default:'' }}";
     quickModal.classList.add('show');
     quickModal.setAttribute('aria-hidden', 'false');
-    quickForm.elements.cours.focus();
+    quickCoursSearch?.focus();
   }
 
   function closeQuickEdit() {
@@ -1007,7 +1014,6 @@ document.head.appendChild(style);
       url: mode === 'cut' ? selectedCard.dataset.moveUrl : selectedCard.dataset.copyUrl,
       previousPayload: cardPayload(selectedCard)
     });
-    updateToolbar();
     notify(
       mode === 'cut'
         ? 'Créneau prêt à être déplacé. Sélectionnez une cellule puis collez.'
@@ -1068,6 +1074,8 @@ document.head.appendChild(style);
   document.addEventListener('dblclick', function(event) {
     const card = event.target.closest('.edt-card[data-creneau-id]');
     if (card) openQuickEdit(card);
+    const cell = event.target.closest('.edt-day-cell[data-grid-cell]');
+    if (cell && !card) openQuickAdd(cell);
   });
 
   document.querySelectorAll('[data-modal-close]').forEach(item => {
@@ -1078,27 +1086,27 @@ document.head.appendChild(style);
   });
 
   toolbarAdd?.addEventListener('click', () => openQuickAdd(selectedCell));
-  document.querySelectorAll('[data-add-cell-trigger]').forEach(item => {
-    item.addEventListener('click', function(event) {
-      event.preventDefault();
-      openQuickAdd(event.target.closest('.edt-day-cell[data-grid-cell]'));
-    });
-  });
-  tools.edit.addEventListener('click', () => openQuickEdit(selectedCard));
-  tools.copy.addEventListener('click', () => copySelected('copy'));
-  tools.cut.addEventListener('click', () => copySelected('cut'));
-  tools.paste.addEventListener('click', async () => {
-    try { await pasteInto(selectedCell); } catch (error) { notify(error.message, 'error'); }
-  });
-  tools.delete.addEventListener('click', () => openDeleteModal(selectedCard));
   deleteConfirm?.addEventListener('click', async () => {
     closeDeleteModal();
     try { await deleteSelected(); } catch (error) { notify(error.message, 'error'); }
   });
 
+  wireAutocomplete(quickCoursSearch, quickCoursInput, quickCoursOptions);
+  wireAutocomplete(quickEnseignantSearch, quickEnseignantInput, quickEnseignantOptions);
+
   quickForm?.addEventListener('submit', async function(event) {
     event.preventDefault();
     if (quickMode === 'edit' && !selectedCard) return;
+    if (!syncAutocompleteValue(quickCoursSearch, quickCoursInput, quickCoursOptions)) {
+      notify('Sélectionnez un cours dans les propositions.', 'error');
+      quickCoursSearch?.focus();
+      return;
+    }
+    if (!syncAutocompleteValue(quickEnseignantSearch, quickEnseignantInput, quickEnseignantOptions)) {
+      notify('Sélectionnez un enseignant dans les propositions.', 'error');
+      quickEnseignantSearch?.focus();
+      return;
+    }
     const undoPayload = quickMode === 'edit' ? cardFormPayload(selectedCard) : null;
     const formData = new FormData(quickForm);
     try {
@@ -1225,11 +1233,13 @@ document.head.appendChild(style);
     cell.addEventListener('drop', async function(event) {
       if (!draggedCard) return;
       event.preventDefault();
-      const oldPayload = cardPayload(draggedCard);
+      const droppedCard = draggedCard;
+      const moveUrl = droppedCard.dataset.moveUrl;
+      const oldPayload = cardFormPayload(droppedCard);
       cleanDropTargets();
       try {
-        const data = await postAction(draggedCard.dataset.moveUrl, cellPayload(cell));
-        setPendingUndo('Créneau déplacé.', draggedCard.dataset.moveUrl, oldPayload);
+        const data = await postAction(moveUrl, cellPayload(cell));
+        setPendingUndo('Créneau déplacé.', moveUrl, oldPayload);
         reloadAfter(data);
       } catch (error) {
         cell.classList.add('is-drop-denied');
@@ -1240,7 +1250,6 @@ document.head.appendChild(style);
   });
 
   runPendingUndoPrompt();
-  updateToolbar();
 })();
 </script>
 {% endif %}
