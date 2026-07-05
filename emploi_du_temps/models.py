@@ -6,38 +6,24 @@ from django.db import models
 from django.db.models import Q
 
 
+NIVEAU_CHOICES = (
+    (3, "Niveau 3"),
+    (4, "Niveau 4"),
+    (5, "Niveau 5"),
+)
+
+
 class Utilisateur(AbstractUser):
-    """Utilisateur de l'application : CD, enseignant ou étudiant."""
+    """Utilisateur de l'application : CD ou enseignant (ressource métier)."""
 
     class Role(models.TextChoices):
         CD = "CD", "Chef de département"
         ENSEIGNANT = "ENSEIGNANT", "Enseignant"
-        ETUDIANT = "ETUDIANT", "Étudiant"
-
-    NIVEAU_CHOICES = (
-        (3, "Niveau 3"),
-        (4, "Niveau 4"),
-        (5, "Niveau 5"),
-    )
 
     email = models.EmailField(unique=True)
     nom = models.CharField(max_length=150)
     prenom = models.CharField(max_length=150)
     role = models.CharField(max_length=20, choices=Role.choices)
-    niveau = models.PositiveSmallIntegerField(
-        "niveau de l’étudiant",
-        choices=NIVEAU_CHOICES,
-        null=True,
-        blank=True,
-    )
-    option = models.ForeignKey(
-        "Option",
-        on_delete=models.PROTECT,
-        related_name="etudiants",
-        verbose_name="option de l’étudiant",
-        null=True,
-        blank=True,
-    )
 
     REQUIRED_FIELDS = ["email", "nom", "role"]
 
@@ -46,33 +32,6 @@ class Utilisateur(AbstractUser):
 
     def seDeconnecter(self) -> None:
         return None
-
-    def clean(self) -> None:
-        super().clean()
-        if self.role != self.Role.ETUDIANT and self.option_id:
-            raise ValidationError(
-                "Seuls les utilisateurs étudiants peuvent être rattachés à une option."
-            )
-        if self.role != self.Role.ETUDIANT and self.niveau:
-            raise ValidationError(
-                "Seuls les utilisateurs étudiants peuvent être rattachés à un niveau."
-            )
-        if self.role == self.Role.ETUDIANT and not self.niveau:
-            raise ValidationError("Le niveau est obligatoire pour un étudiant.")
-
-    def consulterEmploiDuTemps(self):
-        emplois = EmploiDuTemps.objects.filter(statut=EmploiDuTemps.Statut.PUBLIE)
-        if self.role == self.Role.ENSEIGNANT:
-            return emplois.filter(creneaux__enseignant=self).distinct()
-        if self.role == self.Role.ETUDIANT:
-            if self.option_id and self.niveau:
-                return emplois.filter(
-                    Q(creneaux__option=self.option) | Q(creneaux__options=self.option)
-                ).filter(
-                    creneaux__niveau=self.niveau
-                ).distinct()
-            return emplois.none()
-        return emplois
 
     def __str__(self) -> str:
         return f"{self.nom} {self.prenom} ({self.get_role_display()})"
@@ -98,14 +57,6 @@ class Enseignant(Utilisateur):
         proxy = True
         verbose_name = "enseignant"
         verbose_name_plural = "enseignants"
-
-
-class Etudiant(Utilisateur):
-
-    class Meta:
-        proxy = True
-        verbose_name = "étudiant"
-        verbose_name_plural = "étudiants"
 
 
 class Option(models.Model):
@@ -145,7 +96,7 @@ class Cours(models.Model):
     volumeHoraire = models.CharField("volume horaire", max_length=100, blank=True)
     niveau = models.PositiveSmallIntegerField(
         "niveau",
-        choices=Utilisateur.NIVEAU_CHOICES,
+        choices=NIVEAU_CHOICES,
         default=4,
     )
     status = models.BooleanField("actif", default=True)
@@ -301,7 +252,7 @@ class Creneau(models.Model):
     heureFin = models.TimeField("heure de fin")
     niveau = models.PositiveSmallIntegerField(
         "niveau",
-        choices=Utilisateur.NIVEAU_CHOICES,
+        choices=NIVEAU_CHOICES,
         default=4,
     )
     cours = models.ForeignKey(

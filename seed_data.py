@@ -113,22 +113,6 @@ ENSEIGNANTS = [
 ]
 
 
-ETUDIANTS = [
-    {"username": "glo.ngono", "nom": "Ngono", "prenom": "Patrick", "email": "patrick.ngono@enspm.cm", "option": "GLO", "niveau": 4},
-    {"username": "glo.mballa", "nom": "Mballa", "prenom": "Ariane", "email": "ariane.mballa@enspm.cm", "option": "GLO", "niveau": 4},
-    {"username": "glo.essomba", "nom": "Essomba", "prenom": "Joël", "email": "joel.essomba@enspm.cm", "option": "GLO", "niveau": 4},
-    {"username": "rte.abate", "nom": "Abate", "prenom": "Kevin", "email": "kevin.abate@enspm.cm", "option": "RTE", "niveau": 4},
-    {"username": "rte.zra", "nom": "Zra", "prenom": "Nadine", "email": "nadine.zra@enspm.cm", "option": "RTE", "niveau": 4},
-    {"username": "rte.hamadou", "nom": "Hamadou", "prenom": "Ibrahim", "email": "ibrahim.hamadou@enspm.cm", "option": "RTE", "niveau": 4},
-    {"username": "sec.manga", "nom": "Manga", "prenom": "Esther", "email": "esther.manga@enspm.cm", "option": "SEC", "niveau": 4},
-    {"username": "sec.biloa", "nom": "Biloa", "prenom": "Junior", "email": "junior.biloa@enspm.cm", "option": "SEC", "niveau": 4},
-    {"username": "sec.ndongo", "nom": "Ndongo", "prenom": "Clarisse", "email": "clarisse.ndongo@enspm.cm", "option": "SEC", "niveau": 4},
-    {"username": "dsc.talla", "nom": "Talla", "prenom": "Grâce", "email": "grace.talla@enspm.cm", "option": "DSC", "niveau": 4},
-    {"username": "dsc.kamga", "nom": "Kamga", "prenom": "Loïc", "email": "loic.kamga@enspm.cm", "option": "DSC", "niveau": 4},
-    {"username": "dsc.fotso", "nom": "Fotso", "prenom": "Mireille", "email": "mireille.fotso@enspm.cm", "option": "DSC", "niveau": 4},
-]
-
-
 CRENEAUX = [
     # Labo INFOTEL
     {"salle": ("Campus de Sékandé", "Labo INFOTEL"), "jour": Creneau.Jour.MARDI, "debut": "07:30", "fin": "09:30", "cours": ("GLO418", "Développement d'Applications Mobiles"), "enseignant": "touza"},
@@ -274,8 +258,8 @@ def seed_enseignants():
         if user.role != Utilisateur.Role.ENSEIGNANT:
             user.role = Utilisateur.Role.ENSEIGNANT
             changed = True
-        if created:
-            user.set_password(PASSWORD)
+        if created or not user.has_usable_password():
+            user.set_unusable_password()
             changed = True
         if changed:
             user.save()
@@ -284,48 +268,13 @@ def seed_enseignants():
     return created_teachers
 
 
-def seed_etudiants(options):
-    print("\n=== Étudiants ===")
-    created_students = {}
-    for data in ETUDIANTS:
-        option = options[data["option"]]
-        user, created = Utilisateur.objects.get_or_create(
-            username=data["username"],
-            defaults={
-                "email": data["email"],
-                "nom": data["nom"],
-                "prenom": data["prenom"],
-                "role": Utilisateur.Role.ETUDIANT,
-                "option": option,
-                "niveau": data["niveau"],
-            },
-        )
-        changed = False
-        for field in ("email", "nom", "prenom"):
-            if getattr(user, field) != data[field]:
-                setattr(user, field, data[field])
-                changed = True
-        if user.role != Utilisateur.Role.ETUDIANT:
-            user.role = Utilisateur.Role.ETUDIANT
-            changed = True
-        if user.option_id != option.pk:
-            user.option = option
-            changed = True
-        if user.niveau != data["niveau"]:
-            user.niveau = data["niveau"]
-            changed = True
-        if created:
-            user.set_password(PASSWORD)
-            changed = True
-        if changed:
-            user.save()
-        created_students[user.username] = user
-        print(f"  {'[CRÉÉ]  ' if created else '[OK]    '} {user.username} ({data['option']})")
-    return created_students
-
-
 def seed_cd():
-    print("\n=== Chef de département de démonstration ===")
+    print("\n=== Chef de département ===")
+    cd_user = Utilisateur.objects.filter(role=Utilisateur.Role.CD).first()
+    if cd_user:
+        print(f"  [OK]    {cd_user.username} (existant)")
+        return cd_user
+
     cd_user, created = Utilisateur.objects.get_or_create(
         username="cd.demo",
         defaults={
@@ -383,18 +332,18 @@ def print_resume():
     print(f"  UE          : {UE.objects.count()}")
     print(f"  Cours       : {Cours.objects.count()} ({Cours.objects.filter(status=True).count()} actifs)")
     print(f"  Enseignants : {Utilisateur.objects.filter(role=Utilisateur.Role.ENSEIGNANT).count()}")
-    print(f"  Étudiants   : {Utilisateur.objects.filter(role=Utilisateur.Role.ETUDIANT).count()}")
     print(f"  Créneaux    : {Creneau.objects.count()}")
     print("=" * 50)
     print("Seed terminé avec succès.")
-    print(f"Mot de passe temporaire : {PASSWORD}")
+    cd_count = Utilisateur.objects.filter(role=Utilisateur.Role.CD).count()
+    if cd_count:
+        print(f"Comptes CD disponibles : {cd_count}")
 
 
 options = seed_options()
 salles = seed_salles()
 courses = seed_cours(options)
 teachers = seed_enseignants()
-students = seed_etudiants(options)
 cd = seed_cd()
 seed_emploi_du_temps(courses, salles, teachers, cd)
 print_resume()

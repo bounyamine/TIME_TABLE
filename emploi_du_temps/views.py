@@ -25,12 +25,13 @@ from emploi_du_temps.grille import (
     JOURS_EDT,
     PLAGES_HORAIRES,
     construire_grille_semaine,
+    construire_grilles_par_salle,
     creneaux_visibles_semaine,
     trouver_plage,
 )
 from emploi_du_temps.pdf_export import generer_pdf_emplois_du_temps
 from emploi_du_temps.permissions import cd_requis
-from .models import Cours, Creneau, EmploiDuTemps, Option, Salle, UE, Utilisateur
+from .models import Cours, Creneau, EmploiDuTemps, NIVEAU_CHOICES, Option, Salle, UE, Utilisateur
 
 
 class ConnexionView(LoginView):
@@ -41,58 +42,40 @@ class ConnexionView(LoginView):
     def get_success_url(self) -> str:
         return reverse_lazy("tableau_de_bord")
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        if self.request.user.role != Utilisateur.Role.CD:
+            logout(self.request)
+            messages.error(self.request, "Accès réservé au Chef de département.")
+            return redirect("login")
+        return response
+
 
 def accueil(request: HttpRequest) -> HttpResponse:
-    if request.user.is_authenticated:
+    if request.user.is_authenticated and request.user.role == Utilisateur.Role.CD:
         return redirect("tableau_de_bord")
     return render(request, "emploi_du_temps/accueil.html")
-
-
-def inscription_etudiant(request: HttpRequest) -> HttpResponse:
-    if request.user.is_authenticated:
-        return redirect("tableau_de_bord")
-
-    if request.method == "POST":
-        form = UtilisateurRoleCreationForm(request.POST, role=Utilisateur.Role.ETUDIANT)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Votre compte étudiant a été créé. Vous pouvez maintenant vous connecter.")
-            return redirect("login")
-    else:
-        form = UtilisateurRoleCreationForm(role=Utilisateur.Role.ETUDIANT)
-
-    return render(request, "registration/inscription_etudiant.html", {"form": form})
 
 
 @login_required
 def tableau_de_bord(request: HttpRequest) -> HttpResponse:
     utilisateur = request.user
-    context = {"utilisateur": utilisateur}
+    if utilisateur.role != Utilisateur.Role.CD:
+        return HttpResponseForbidden("Accès réservé au Chef de département.")
 
-    if utilisateur.role == Utilisateur.Role.CD:
-        template = "emploi_du_temps/tableaux_de_bord/cd.html"
-        context.update({
-            "nb_enseignants": Utilisateur.objects.filter(role=Utilisateur.Role.ENSEIGNANT).count(),
-            "nb_etudiants": Utilisateur.objects.filter(role=Utilisateur.Role.ETUDIANT).count(),
-            "nb_cours": Cours.objects.count(),
-            "nb_ues": UE.objects.count(),
-            "nb_salles": Salle.objects.count(),
-            "nb_options": Option.objects.count(),
-            "nb_emplois": EmploiDuTemps.objects.count(),
-            "nb_brouillons": EmploiDuTemps.objects.filter(statut=EmploiDuTemps.Statut.BROUILLON).count(),
-            "nb_publies": EmploiDuTemps.objects.filter(statut=EmploiDuTemps.Statut.PUBLIE).count(),
-            "emplois_recents": EmploiDuTemps.objects.select_related("creePar")[:5],
-        })
-    elif utilisateur.role == Utilisateur.Role.ENSEIGNANT:
-        template = "emploi_du_temps/tableaux_de_bord/enseignant.html"
-        context["emplois_du_temps"] = EmploiDuTemps.objects.filter(statut=EmploiDuTemps.Statut.PUBLIE)
-    elif utilisateur.role == Utilisateur.Role.ETUDIANT:
-        template = "emploi_du_temps/tableaux_de_bord/etudiant.html"
-        context["emplois_du_temps"] = EmploiDuTemps.objects.filter(statut=EmploiDuTemps.Statut.PUBLIE)
-    else:
-        return HttpResponseForbidden("Rôle utilisateur non autorisé.")
-
-    return render(request, template, context)
+    context = {
+        "utilisateur": utilisateur,
+        "nb_enseignants": Utilisateur.objects.filter(role=Utilisateur.Role.ENSEIGNANT).count(),
+        "nb_cours": Cours.objects.count(),
+        "nb_ues": UE.objects.count(),
+        "nb_salles": Salle.objects.count(),
+        "nb_options": Option.objects.count(),
+        "nb_emplois": EmploiDuTemps.objects.count(),
+        "nb_brouillons": EmploiDuTemps.objects.filter(statut=EmploiDuTemps.Statut.BROUILLON).count(),
+        "nb_publies": EmploiDuTemps.objects.filter(statut=EmploiDuTemps.Statut.PUBLIE).count(),
+        "emplois_recents": EmploiDuTemps.objects.select_related("creePar")[:5],
+    }
+    return render(request, "emploi_du_temps/tableaux_de_bord/cd.html", context)
 
 
 @login_required
@@ -146,7 +129,7 @@ def _filtres_grille_depuis_requete(request: HttpRequest, salles) -> dict:
         option_id = None
 
     niveau = _entier_get(request, "niveau")
-    niveaux_valides = {niveau for niveau, _label in Utilisateur.NIVEAU_CHOICES}
+    niveaux_valides = {niveau for niveau, _label in NIVEAU_CHOICES}
     if niveau not in niveaux_valides:
         niveau = None
 
@@ -166,26 +149,19 @@ def _query_grille(request: HttpRequest, export: bool = False) -> str:
     return query_params.urlencode()
 
 
-@login_required
 def grille_edt(request: HttpRequest, semaine: str | None = None) -> HttpResponse:
     """Grille EDT par semaine — vue principale."""
     semaine_date = _get_lundi(semaine or request.GET.get("semaine"))
     salles = Salle.objects.all()
-    est_cd = request.user.role == Utilisateur.Role.CD
+    est_cd = (
+        request.user.is_authenticated
+        and request.user.role == Utilisateur.Role.CD
+    )
+    utilisateur = request.user if request.user.is_authenticated else None
     filtres = _filtres_grille_depuis_requete(request, salles)
     salle_id = filtres["salle_id"]
-    if est_cd and not salle_id:
-        premiere_salle = salles.first()
-        salle_id = premiere_salle.pk if premiere_salle else None
-        filtres["salle_id"] = salle_id
 
     if request.GET.get("export") == "pdf":
-        if request.user.role not in {
-            Utilisateur.Role.CD,
-            Utilisateur.Role.ENSEIGNANT,
-            Utilisateur.Role.ETUDIANT,
-        }:
-            return HttpResponseForbidden("Rôle utilisateur non autorisé.")
         if not est_cd:
             emplois_export = EmploiDuTemps.objects.filter(
                 semaine=semaine_date,
@@ -193,19 +169,30 @@ def grille_edt(request: HttpRequest, semaine: str | None = None) -> HttpResponse
             )
             if not emplois_export.exists():
                 return HttpResponseForbidden("Aucun emploi du temps publié pour cette semaine.")
-            if not creneaux_visibles_semaine(semaine_date, request.user, filtres=filtres).exists():
+            if not creneaux_visibles_semaine(semaine_date, utilisateur, filtres=filtres).exists():
                 return HttpResponseForbidden("Aucun créneau publié ne correspond aux filtres sélectionnés.")
-        export = generer_pdf_emplois_du_temps(semaine_date, utilisateur=request.user, filtres=filtres)
+        export = generer_pdf_emplois_du_temps(semaine_date, utilisateur=utilisateur, filtres=filtres)
         response = HttpResponse(export.contenu, content_type="application/pdf")
         response["Content-Disposition"] = f'attachment; filename="{export.nom_fichier}"'
         return response
     
 
-    lignes = construire_grille_semaine(
-        semaine_date,
-        utilisateur=request.user,
-        filtres=filtres,
-    )
+    if salle_id:
+        lignes = construire_grille_semaine(
+            semaine_date,
+            utilisateur=utilisateur,
+            filtres=filtres,
+        )
+        salles_lignes = None
+        mode_multi_grilles = False
+    else:
+        salles_lignes = construire_grilles_par_salle(
+            semaine_date,
+            utilisateur=utilisateur,
+            filtres=filtres,
+        )
+        lignes = None
+        mode_multi_grilles = bool(salles_lignes)
 
     # Semaines déjà planifiées
     semaines_dispo_qs = EmploiDuTemps.objects.all()
@@ -230,6 +217,8 @@ def grille_edt(request: HttpRequest, semaine: str | None = None) -> HttpResponse
         "semaine_next": semaine_date + timedelta(weeks=1),
         "jours": JOURS_EDT,
         "lignes": lignes,
+        "salles_lignes": salles_lignes,
+        "mode_multi_grilles": mode_multi_grilles,
         "plages": PLAGES_HORAIRES,
         "salles": salles,
         "salle_id_actif": salle_id,
@@ -241,7 +230,7 @@ def grille_edt(request: HttpRequest, semaine: str | None = None) -> HttpResponse
             is_active=True,
         ).order_by("nom", "prenom"),
         "options_filtre": Option.objects.all(),
-        "niveaux_filtre": Utilisateur.NIVEAU_CHOICES,
+        "niveaux_filtre": NIVEAU_CHOICES,
         "navigation_query": navigation_query,
         "export_url": f"/emplois-du-temps/grille/{semaine_date.isoformat()}/?{export_query}",
         "semaines_dispo": semaines_dispo,
@@ -702,15 +691,13 @@ def _redirect_apres_action(request: HttpRequest, fallback: str):
 
 
 def _utilisateur_liste(request, role: str, template: str, context_name: str):
-    utilisateurs = Utilisateur.objects.filter(role=role).select_related("option").order_by("nom", "prenom", "username")
+    utilisateurs = Utilisateur.objects.filter(role=role).order_by("nom", "prenom", "username")
     page_obj, pagination_query = _paginer_ressources(request, utilisateurs)
     context = {
         context_name: page_obj.object_list,
         "page_obj": page_obj,
         "pagination_query": pagination_query,
     }
-    if role == Utilisateur.Role.ETUDIANT:
-        context["options"] = Option.objects.all()
     return render(request, template, context)
 
 
@@ -814,60 +801,6 @@ def enseignant_supprimer(request, pk):
         Utilisateur.Role.ENSEIGNANT,
         "enseignant_liste",
         "Enseignant",
-    )
-
-
-@cd_requis
-def etudiant_liste(request):
-    return _utilisateur_liste(
-        request,
-        Utilisateur.Role.ETUDIANT,
-        "emploi_du_temps/ressources/etudiants/liste.html",
-        "etudiants",
-    )
-
-
-@cd_requis
-def etudiant_creer(request):
-    return _utilisateur_creer(
-        request,
-        Utilisateur.Role.ETUDIANT,
-        "etudiant_liste",
-        "Étudiant",
-    )
-
-
-@cd_requis
-def etudiant_modifier(request, pk):
-    return _utilisateur_modifier(
-        request,
-        pk,
-        Utilisateur.Role.ETUDIANT,
-        "etudiant_liste",
-        "Étudiant",
-    )
-
-
-@cd_requis
-@require_POST
-def etudiant_basculer_statut(request, pk):
-    etudiant = get_object_or_404(Utilisateur, pk=pk, role=Utilisateur.Role.ETUDIANT)
-    etudiant.is_active = not etudiant.is_active
-    etudiant.save(update_fields=["is_active"])
-
-    statut = "activé" if etudiant.is_active else "désactivé"
-    messages.success(request, f"Étudiant {etudiant.nom} {etudiant.prenom} {statut}.")
-    return _redirect_apres_action(request, "etudiant_liste")
-
-
-@cd_requis
-def etudiant_supprimer(request, pk):
-    return _utilisateur_supprimer(
-        request,
-        pk,
-        Utilisateur.Role.ETUDIANT,
-        "etudiant_liste",
-        "Étudiant",
     )
 
 
@@ -1144,7 +1077,7 @@ def option_supprimer(request, pk):
         try:
             option.delete()
         except ProtectedError:
-            messages.error(request, "Impossible de supprimer cette option car elle est liée à des cours, créneaux ou étudiants.")
+            messages.error(request, "Impossible de supprimer cette option car elle est liée à des cours ou créneaux.")
             return redirect("option_liste")
         messages.success(request, "Option supprimée.")
         return redirect("option_liste")

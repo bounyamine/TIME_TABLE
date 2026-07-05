@@ -5,7 +5,6 @@ urlpatterns = [
     # ── Auth ──────────────────────────────────────
     path("", views.accueil, name="accueil"),
     path("connexion/", views.ConnexionView.as_view(), name="login"),
-    path("inscription_etudiant/etudiant/", views.inscription_etudiant, name="inscription_etudiant"),
     path("deconnexion/", views.deconnexion, name="logout"),
     path("tableau-de-bord/", views.tableau_de_bord, name="tableau_de_bord"),
 
@@ -29,12 +28,6 @@ urlpatterns = [
     path("enseignants/<int:pk>/modifier/", views.enseignant_modifier, name="enseignant_modifier"),
     path("enseignants/<int:pk>/statut/", views.enseignant_basculer_statut, name="enseignant_basculer_statut"),
     path("enseignants/<int:pk>/supprimer/", views.enseignant_supprimer, name="enseignant_supprimer"),
-
-    path("etudiants/", views.etudiant_liste, name="etudiant_liste"),
-    path("etudiants/nouveau/", views.etudiant_creer, name="etudiant_creer"),
-    path("etudiants/<int:pk>/modifier/", views.etudiant_modifier, name="etudiant_modifier"),
-    path("etudiants/<int:pk>/statut/", views.etudiant_basculer_statut, name="etudiant_basculer_statut"),
-    path("etudiants/<int:pk>/supprimer/", views.etudiant_supprimer, name="etudiant_supprimer"),
 
     path("ues/", views.ue_liste, name="ue_liste"),
     path("ues/nouvelle/", views.ue_creer, name="ue_creer"),

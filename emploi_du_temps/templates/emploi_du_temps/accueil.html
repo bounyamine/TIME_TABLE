@@ -115,17 +115,17 @@
       <i class="ti ti-calendar-event" aria-hidden="true"></i>
     </div>
     <h1>EDT ENSPM</h1>
-    <p>Connectez-vous pour accéder à votre espace.</p>
+    <p>Consultez les emplois du temps publiés ou connectez-vous en tant que Chef de département.</p>
   </div>
 
   <div class="accueil-body">
-    <a href="{% url 'login' %}" class="btn-accueil-primary">
-      <i class="ti ti-login" aria-hidden="true"></i>
-      Se connecter
+    <a href="{% url 'grille_edt' %}" class="btn-accueil-primary">
+      <i class="ti ti-calendar-week" aria-hidden="true"></i>
+      Consulter les emplois du temps
     </a>
-    <a href="{% url 'inscription_etudiant' %}" class="btn-accueil-secondary">
-      <i class="ti ti-user-plus" aria-hidden="true"></i>
-      Créer un compte étudiant
+    <a href="{% url 'login' %}" class="btn-accueil-secondary">
+      <i class="ti ti-login" aria-hidden="true"></i>
+      Connexion Chef de département
     </a>
   </div>
 </div>
