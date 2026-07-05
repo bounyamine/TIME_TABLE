@@ -1,0 +1,76 @@
+<table class="edt-grid">
+  <thead>
+    <tr>
+      <th class="edt-th-horaire">Horaires</th>
+      {% for code, label in jours %}
+      <th class="edt-th">{{ label|upper }}</th>
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for ligne in lignes %}
+      {% if ligne.pause %}
+      <tr class="edt-pause-row">
+        <td class="edt-pause-horaire">{{ ligne.plage.label }}</td>
+        <td class="edt-pause-cell" colspan="6"><i class="ti ti-coffee"></i> PAUSE</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td class="edt-horaire-cell"><strong>{{ ligne.plage.label }}</strong></td>
+        {% for cellule in ligne.cellules %}
+        <td class="edt-day-cell"
+            {% if est_cd %}
+            data-grid-cell
+            data-jour="{{ cellule.jour }}"
+            data-plage="{{ cellule.plage.id }}"
+            data-salle-id="{{ salle_id_actif|default:'' }}"
+            data-add-url="{% url 'ajouter_creneau_grille' %}?semaine={{ semaine|date:'Y-m-d' }}{% if salle_id_actif %}&salle={{ salle_id_actif }}{% endif %}&jour={{ cellule.jour }}&plage={{ cellule.plage.id }}"
+            {% endif %}>
+
+          {% for cr in cellule.creneaux %}
+          <div class="edt-card"
+               {% if est_cd %}
+               draggable="true"
+               data-creneau-id="{{ cr.pk }}"
+               data-title="{{ cr.cours.intitule }}"
+               data-semaine="{{ semaine|date:'Y-m-d' }}"
+               data-cours-id="{{ cr.cours_id }}"
+               data-enseignant-id="{{ cr.enseignant_id }}"
+               data-salle-id="{{ cr.salle_id }}"
+               data-options-ids="{% for option in cr.options.all %}{{ option.pk }}{% if not forloop.last %},{% endif %}{% empty %}{{ cr.option_id }}{% endfor %}"
+               data-jour="{{ cellule.jour }}"
+               data-plage="{{ cellule.plage.id }}"
+               data-edit-url="{% url 'modifier_creneau_grille' cr.pk %}"
+               data-delete-url="{% url 'supprimer_creneau_grille' cr.pk %}"
+               data-move-url="{% url 'deplacer_creneau_grille' cr.pk %}"
+               data-copy-url="{% url 'copier_creneau_grille' cr.pk %}"
+               {% endif %}>
+            <div class="edt-card-body">
+              <div class="edt-cours-nom">{{ cr.cours.intitule }}</div>
+              <div class="edt-code-badge-line">{{ cr.reference_affichage }}</div>
+              {% if cr.cours.volumeHoraire %}
+              <div class="edt-volume">({{ cr.cours.volumeHoraire }})</div>
+              {% endif %}
+              <div class="edt-enseignant-line">{{ cr.enseignant.nom }} {{ cr.enseignant.prenom }}</div>
+              {% if not salle_id_actif and not masquer_nom_salle %}
+              <div class="edt-meta-small"><i class="ti ti-building"></i> {{ cr.salle.nom }}</div>
+              {% endif %}
+            </div>
+          </div>
+          {% empty %}
+          {% if est_cd %}
+          <span class="edt-empty-marker" aria-hidden="true">
+            <i class="ti ti-plus"></i>
+          </span>
+          {% else %}
+          <span style="display:block;min-height:50px;"></span>
+          {% endif %}
+          {% endfor %}
+
+        </td>
+        {% endfor %}
+      </tr>
+      {% endif %}
+    {% endfor %}
+  </tbody>
+</table>

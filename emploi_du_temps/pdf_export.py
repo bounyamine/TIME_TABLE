@@ -9,7 +9,7 @@ from django.template.loader import render_to_string
 from django.utils.text import slugify
 from weasyprint import HTML
 
-from .grille import JOURS_EDT, construire_grille_semaine, creneaux_visibles_semaine
+from .grille import JOURS_EDT, construire_grille_semaine, construire_grilles_par_salle
 from .models import Salle
 
 
@@ -21,35 +21,30 @@ class ExportPlanning:
 
 def generer_pdf_emplois_du_temps(semaine: date, utilisateur=None, filtres: dict | None = None) -> ExportPlanning:
     filtres = filtres or {}
-    creneaux = creneaux_visibles_semaine(semaine, utilisateur, filtres=filtres)
-    salles = Salle.objects.filter(creneaux__in=creneaux).distinct()
-    if filtres.get("salle_id"):
-        salles = Salle.objects.filter(pk=filtres["salle_id"])
-    if not salles.exists() and (
+    salles_lignes = construire_grilles_par_salle(semaine, utilisateur, filtres=filtres)
+    if not salles_lignes and (
         not utilisateur
         or not utilisateur.is_authenticated
         or utilisateur.role == utilisateur.Role.CD
     ):
-        salles = Salle.objects.all()
-
-    salles_lignes = [
-        {
-            "salle": salle,
-            "lignes": construire_grille_semaine(
-                semaine,
-                salle_id=salle.pk,
-                utilisateur=utilisateur,
-                filtres={key: value for key, value in filtres.items() if key != "salle_id"},
-            ),
-        }
-        for salle in salles.order_by("site", "nom")
-    ]
+        filtres_sans_salle = {key: value for key, value in filtres.items() if key != "salle_id"}
+        salles_lignes = [
+            {
+                "salle": salle,
+                "lignes": construire_grille_semaine(
+                    semaine,
+                    salle_id=salle.pk,
+                    utilisateur=utilisateur,
+                    filtres=filtres_sans_salle,
+                ),
+            }
+            for salle in Salle.objects.all().order_by("site", "nom")
+        ]
 
     logo_path = os.path.join(
         settings.BASE_DIR,
         "emploi_du_temps", "static", "emploi_du_temps", "img", "logo_enspm.png"
     )
-    # Si le fichier n'existe pas, on passe None → le template affiche "ENSPM" en texte
     if not os.path.isfile(logo_path):
         logo_path = None
 
@@ -78,5 +73,29 @@ def generer_pdf_emplois_du_temps(semaine: date, utilisateur=None, filtres: dict 
     )
 
     contenu = HTML(string=html_str).write_pdf()
-    slug = slugify(f"emplois-du-temps-{semaine.isoformat()}")
-    return ExportPlanning(contenu=contenu, nom_fichier=f"{slug}.pdf")
+    fin_semaine = semaine + timedelta(days=5)
+
+    mois = [
+        "",
+        "JANVIER", "FÉVRIER", "MARS", "AVRIL", "MAI", "JUIN",
+        "JUILLET", "AOÛT", "SEPTEMBRE", "OCTOBRE", "NOVEMBRE", "DÉCEMBRE",
+    ]
+
+    if semaine.month == fin_semaine.month:
+        nom_fichier = (
+            f"TIME_TABLE_ENSPM_INFOTEL_DU_"
+            f"{semaine.day:02d}_AU_{fin_semaine.day:02d}_"
+            f"{mois[semaine.month]}_{semaine.year}.pdf"
+        )
+    else:
+        nom_fichier = (
+            f"TIME_TABLE_ENSPM_INFOTEL_DU_"
+            f"{semaine.day:02d}_{mois[semaine.month]}_"
+            f"AU_{fin_semaine.day:02d}_{mois[fin_semaine.month]}_"
+            f"{fin_semaine.year}.pdf"
+        )
+
+    return ExportPlanning(
+        contenu=contenu,
+        nom_fichier=nom_fichier,
+    )

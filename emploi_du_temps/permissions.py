@@ -19,10 +19,6 @@ def est_enseignant(utilisateur: Utilisateur) -> bool:
     )
 
 
-def est_etudiant(utilisateur: Utilisateur) -> bool:
-    return utilisateur.is_authenticated and utilisateur.role == Utilisateur.Role.ETUDIANT
-
-
 def cd_requis(vue: Callable[..., HttpResponse]) -> Callable[..., HttpResponse]:
 
     @login_required

@@ -2,7 +2,7 @@ from datetime import date, time
 
 from django.db.models import Q
 
-from .models import Creneau, EmploiDuTemps
+from .models import Creneau, EmploiDuTemps, Salle
 
 JOURS_EDT = [
     ("LUNDI", "Lundi"),
@@ -90,6 +90,47 @@ def construire_grille_semaine(
     return lignes
 
 
+def construire_grilles_par_salle(
+    semaine: date,
+    utilisateur=None,
+    filtres: dict | None = None,
+) -> list[dict]:
+    """Une grille par salle ayant des créneaux visibles (ou la salle filtrée)."""
+    filtres = dict(filtres or {})
+    filtres_sans_salle = {key: value for key, value in filtres.items() if key != "salle_id"}
+    creneaux = creneaux_visibles_semaine(semaine, utilisateur, filtres=filtres)
+    est_cd = (
+        utilisateur
+        and utilisateur.is_authenticated
+        and utilisateur.role == utilisateur.Role.CD
+    )
+    if filtres.get("salle_id"):
+        salles = Salle.objects.filter(pk=filtres["salle_id"])
+    elif est_cd:
+        # Le CD doit pouvoir éditer/remplir même les salles encore vides cette semaine.
+        salles = Salle.objects.all()
+    else:
+        salles = Salle.objects.filter(creneaux__in=creneaux).distinct()
+
+    compte_par_salle: dict[int, int] = {}
+    for c in creneaux:
+        compte_par_salle[c.salle_id] = compte_par_salle.get(c.salle_id, 0) + 1
+
+    return [
+        {
+            "salle": salle,
+            "lignes": construire_grille_semaine(
+                semaine,
+                salle_id=salle.pk,
+                utilisateur=utilisateur,
+                filtres=filtres_sans_salle,
+            ),
+            "nb_creneaux": compte_par_salle.get(salle.pk, 0),
+        }
+        for salle in salles.order_by("site", "nom")
+    ]
+
+
 def appliquer_filtres_creneaux(qs, filtres: dict | None = None):
     filtres = filtres or {}
     if filtres.get("salle_id"):
@@ -110,12 +151,12 @@ def creneaux_visibles_semaine(semaine: date, utilisateur=None, filtres: dict | N
         "cours__ue", "cours", "enseignant", "salle", "option", "emploiDuTemps"
     ).prefetch_related("options", "cours__options")
 
-    if utilisateur and utilisateur.is_authenticated:
-        if utilisateur.role == utilisateur.Role.ENSEIGNANT:
-            qs = qs.filter(emploiDuTemps__statut=EmploiDuTemps.Statut.PUBLIE)
-        elif utilisateur.role == utilisateur.Role.ETUDIANT:
-            qs = qs.filter(emploiDuTemps__statut=EmploiDuTemps.Statut.PUBLIE)
-        elif utilisateur.role != utilisateur.Role.CD:
-            qs = qs.none()
+    est_cd = (
+        utilisateur
+        and utilisateur.is_authenticated
+        and utilisateur.role == utilisateur.Role.CD
+    )
+    if not est_cd:
+        qs = qs.filter(emploiDuTemps__statut=EmploiDuTemps.Statut.PUBLIE)
 
     return appliquer_filtres_creneaux(qs, filtres)

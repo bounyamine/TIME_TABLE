@@ -8,13 +8,6 @@ from .models import Cours, Creneau, EmploiDuTemps, Option, Salle, Utilisateur
 from .grille import PLAGES_HORAIRES, JOURS_EDT, trouver_plage
 
 
-NIVEAU_CHOICES = [(3, "3"), (4, "4"), (5, "5")]
-
-
-def option_pour_sigle(sigle: str) -> Option | None:
-    return Option.objects.filter(sigle=sigle).first()
-
-
 class UsernameOrEmailAuthenticationForm(AuthenticationForm):
     username = forms.CharField(
         label="Nom d'utilisateur ou email",
@@ -51,37 +44,25 @@ class CoursModelChoiceField(forms.ModelChoiceField):
 class UtilisateurRoleCreationForm(forms.ModelForm):
     """Création d'un utilisateur métier avec rôle imposé par la vue."""
 
-    option_sigle = forms.ChoiceField(
-        label="Option",
-        choices=[],
-        required=False,
-    )
     password = forms.CharField(
         label="Mot de passe",
         strip=False,
+        required=False,
         widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}),
     )
 
     class Meta:
         model = Utilisateur
-        fields = ["nom", "prenom", "email", "username", "option", "niveau"]
+        fields = ["nom", "prenom", "email", "username"]
 
     def __init__(self, *args, role: str, **kwargs):
         super().__init__(*args, **kwargs)
         self.role = role
         self.instance.role = role
-        self.fields["option"].queryset = Option.objects.all()
-        self.fields["option"].required = False
-        self.fields["option_sigle"].choices = [("", "-- Sélectionner votre option --")] + [
-            (option.sigle, f"{option.sigle} - {option.nom}")
-            for option in Option.objects.all()
-        ]
-        self.fields["niveau"].choices = [("", "-- Sélectionner votre niveau --")] + NIVEAU_CHOICES
-        self.fields["niveau"].required = role == Utilisateur.Role.ETUDIANT
-        if role != Utilisateur.Role.ETUDIANT:
-            self.fields.pop("option")
-            self.fields.pop("option_sigle")
-            self.fields.pop("niveau")
+        if role == Utilisateur.Role.ENSEIGNANT:
+            self.fields.pop("password")
+        else:
+            self.fields["password"].required = True
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-control")
 
@@ -103,37 +84,13 @@ class UtilisateurRoleCreationForm(forms.ModelForm):
             raise ValidationError("Ce nom d'utilisateur est déjà pris.")
         return username
 
-    def clean_niveau(self):
-        niveau = self.cleaned_data.get("niveau")
-        if niveau in ("", None):
-            return None
-        return int(niveau)
-
-    def clean(self):
-        cleaned_data = super().clean()
-        if self.role == Utilisateur.Role.ETUDIANT:
-            option = cleaned_data.get("option")
-            option_sigle = cleaned_data.get("option_sigle")
-            niveau = cleaned_data.get("niveau")
-            if option_sigle:
-                option = option_pour_sigle(option_sigle)
-                if option is None:
-                    self.add_error("option_sigle", "Cette option n'existe pas encore dans la base.")
-                else:
-                    cleaned_data["option"] = option
-            if option is None and not option_sigle:
-                self.add_error("option_sigle", "L'option est obligatoire pour un étudiant.")
-            if niveau is None:
-                self.add_error("niveau", "Le niveau est obligatoire pour un étudiant.")
-        return cleaned_data
-
     def save(self, commit=True):
         utilisateur = super().save(commit=False)
         utilisateur.role = self.role
-        if self.role != Utilisateur.Role.ETUDIANT:
-            utilisateur.option = None
-            utilisateur.niveau = None
-        utilisateur.set_password(self.cleaned_data["password"])
+        if self.role == Utilisateur.Role.ENSEIGNANT:
+            utilisateur.set_unusable_password()
+        else:
+            utilisateur.set_password(self.cleaned_data["password"])
         if commit:
             utilisateur.full_clean()
             utilisateur.save()
@@ -145,18 +102,11 @@ class UtilisateurRoleModificationForm(forms.ModelForm):
 
     class Meta:
         model = Utilisateur
-        fields = ["nom", "prenom", "email", "option", "niveau", "is_active"]
+        fields = ["nom", "prenom", "email", "is_active"]
 
     def __init__(self, *args, role: str, **kwargs):
         super().__init__(*args, **kwargs)
         self.role = role
-        self.fields["option"].queryset = Option.objects.all()
-        self.fields["option"].required = role == Utilisateur.Role.ETUDIANT
-        self.fields["niveau"].choices = [("", "-- Sélectionner --")] + NIVEAU_CHOICES
-        self.fields["niveau"].required = role == Utilisateur.Role.ETUDIANT
-        if role != Utilisateur.Role.ETUDIANT:
-            self.fields.pop("option")
-            self.fields.pop("niveau")
         self.fields["is_active"].required = False
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-control")
@@ -171,9 +121,6 @@ class UtilisateurRoleModificationForm(forms.ModelForm):
     def save(self, commit=True):
         utilisateur = super().save(commit=False)
         utilisateur.role = self.role
-        if self.role != Utilisateur.Role.ETUDIANT:
-            utilisateur.option = None
-            utilisateur.niveau = None
         if commit:
             utilisateur.full_clean()
             utilisateur.save()

@@ -8,7 +8,6 @@ from .models import (
     Creneau,
     EmploiDuTemps,
     Enseignant,
-    Etudiant,
     Option,
     Salle,
     UE,
@@ -20,13 +19,13 @@ from .models import (
 class UtilisateurAdmin(UserAdmin):
 
     fieldsets = UserAdmin.fieldsets + (
-        ("Informations métier", {"fields": ("nom", "prenom", "role", "option", "niveau")}),
+        ("Informations métier", {"fields": ("nom", "prenom", "role")}),
     )
     add_fieldsets = UserAdmin.add_fieldsets + (
-        ("Informations métier", {"fields": ("email", "nom", "prenom", "role", "option", "niveau")}),
+        ("Informations métier", {"fields": ("email", "nom", "prenom", "role")}),
     )
-    list_display = ("username", "email", "nom", "prenom", "role", "option", "niveau", "is_staff")
-    list_filter = ("role", "option", "niveau", "is_staff", "is_superuser", "is_active")
+    list_display = ("username", "email", "nom", "prenom", "role", "is_staff")
+    list_filter = ("role", "is_staff", "is_superuser", "is_active")
     search_fields = ("username", "email", "nom", "prenom")
 
 
@@ -42,13 +41,6 @@ class EnseignantAdmin(UtilisateurAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).filter(role=Utilisateur.Role.ENSEIGNANT)
-
-
-@admin.register(Etudiant)
-class EtudiantAdmin(UtilisateurAdmin):
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).filter(role=Utilisateur.Role.ETUDIANT)
 
 
 @admin.register(Option)

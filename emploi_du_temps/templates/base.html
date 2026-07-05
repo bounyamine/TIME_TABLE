@@ -617,12 +617,6 @@ tbody td{padding:13px 18px;color:var(--gray-700);vertical-align:middle}
   .resource-table-enseignants td:nth-child(2),
   .resource-table-enseignants th:nth-child(3),
   .resource-table-enseignants td:nth-child(3),
-  .resource-table-etudiants th:nth-child(2),
-  .resource-table-etudiants td:nth-child(2),
-  .resource-table-etudiants th:nth-child(3),
-  .resource-table-etudiants td:nth-child(3),
-  .resource-table-etudiants th:nth-child(5),
-  .resource-table-etudiants td:nth-child(5),
   .resource-table-cours th:nth-child(3),
   .resource-table-cours td:nth-child(3),
   .resource-table-cours th:nth-child(4),
@@ -719,6 +713,15 @@ document.addEventListener('DOMContentLoaded', function () {
       <i class="ti ti-logout" aria-hidden="true"></i> Déconnexion
     </a>
   </div>
+  {% else %}
+  <div class="navbar-right">
+    <a href="{% url 'grille_edt' %}" class="btn-logout" style="background:var(--blue-light);color:var(--blue);border-color:var(--blue-mid);">
+      <i class="ti ti-calendar-week" aria-hidden="true"></i> Emplois du temps
+    </a>
+    <a href="{% url 'login' %}" class="btn-logout" style="background:var(--blue);color:#fff;border-color:var(--blue);">
+      <i class="ti ti-login" aria-hidden="true"></i> Connexion CD
+    </a>
+  </div>
   {% endif %}
 </nav>
 
@@ -731,9 +734,6 @@ document.addEventListener('DOMContentLoaded', function () {
     {% if user.role == "CD" %}
     <a href="{% url 'enseignant_liste' %}" class="mobile-nav-link {% if 'enseignant' in request.resolver_match.url_name %}active{% endif %}">
       <i class="ti ti-users" aria-hidden="true"></i> Enseignants
-    </a>
-    <a href="{% url 'etudiant_liste' %}" class="mobile-nav-link {% if 'etudiant' in request.resolver_match.url_name %}active{% endif %}">
-      <i class="ti ti-school" aria-hidden="true"></i> Étudiants
     </a>
     <a href="{% url 'ue_liste' %}" class="mobile-nav-link {% if 'ue' in request.resolver_match.url_name %}active{% endif %}">
       <i class="ti ti-components" aria-hidden="true"></i> UE
@@ -771,9 +771,6 @@ document.addEventListener('DOMContentLoaded', function () {
     <span class="nav-section">Ressources</span>
     <a href="{% url 'enseignant_liste' %}" class="nav-link {% if 'enseignant' in request.resolver_match.url_name %}active{% endif %}">
       <i class="ti ti-users" aria-hidden="true"></i> Enseignants
-    </a>
-    <a href="{% url 'etudiant_liste' %}" class="nav-link {% if 'etudiant' in request.resolver_match.url_name %}active{% endif %}">
-      <i class="ti ti-school" aria-hidden="true"></i> Étudiants
     </a>
     <a href="{% url 'ue_liste' %}" class="nav-link {% if 'ue' in request.resolver_match.url_name %}active{% endif %}">
       <i class="ti ti-components" aria-hidden="true"></i> UE

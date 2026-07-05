@@ -95,9 +95,7 @@
     <div class="salle-select-wrap">
       <i class="ti ti-building salle-select-icon"></i>
       <select name="salle_id" class="salle-select" onchange="this.form.submit()">
-        {% if not est_cd %}
-        <option value="">Salles</option>
-        {% endif %}
+        <option value="">Toutes les salles</option>
         {% for s in salles %}
         <option value="{{ s.pk }}" {% if salle_id_actif == s.pk %}selected{% endif %}>{{ s.nom }}</option>
         {% endfor %}
@@ -146,85 +144,45 @@
 
 
 <!-- ── Grille officielle ── -->
-<div style="overflow-x:auto;">
-<table class="edt-grid">
-  <thead>
-    <tr>
-      <th class="edt-th-horaire">Horaires</th>
-      {% for code, label in jours %}
-      <th class="edt-th">{{ label|upper }}</th>
-      {% endfor %}
-    </tr>
-  </thead>
-  <tbody>
-    {% for ligne in lignes %}
-      {% if ligne.pause %}
-      <tr class="edt-pause-row">
-        <td class="edt-pause-horaire">{{ ligne.plage.label }}</td>
-        <td class="edt-pause-cell" colspan="6"><i class="ti ti-coffee"></i> PAUSE</td>
-      </tr>
-      {% else %}
-      <tr>
-        <td class="edt-horaire-cell"><strong>{{ ligne.plage.label }}</strong></td>
-        {% for cellule in ligne.cellules %}
-        <td class="edt-day-cell"
-            {% if est_cd %}
-            data-grid-cell
-            data-jour="{{ cellule.jour }}"
-            data-plage="{{ cellule.plage.id }}"
-            data-salle-id="{{ salle_id_actif|default:'' }}"
-            data-add-url="{% url 'ajouter_creneau_grille' %}?semaine={{ semaine|date:'Y-m-d' }}{% if salle_id_actif %}&salle={{ salle_id_actif }}{% endif %}&jour={{ cellule.jour }}&plage={{ cellule.plage.id }}"
-            {% endif %}>
+{% if mode_multi_grilles and salles_lignes|length > 1 %}
+<nav class="edt-salle-nav" aria-label="Navigation par salle">
+  {% for bloc in salles_lignes %}
+  <a href="#salle-{{ bloc.salle.pk }}" class="edt-salle-nav-link {% if not bloc.nb_creneaux %}is-vide{% endif %}">
+    {{ bloc.salle.nom }}
+    {% if bloc.nb_creneaux %}
+    <span class="edt-salle-nav-count">{{ bloc.nb_creneaux }}</span>
+    {% endif %}
+  </a>
+  {% endfor %}
+</nav>
+{% endif %}
 
-          {% for cr in cellule.creneaux %}
-          <div class="edt-card"
-               {% if est_cd %}
-               draggable="true"
-               data-creneau-id="{{ cr.pk }}"
-               data-title="{{ cr.cours.intitule }}"
-               data-semaine="{{ semaine|date:'Y-m-d' }}"
-               data-cours-id="{{ cr.cours_id }}"
-               data-enseignant-id="{{ cr.enseignant_id }}"
-               data-salle-id="{{ cr.salle_id }}"
-               data-options-ids="{% for option in cr.options.all %}{{ option.pk }}{% if not forloop.last %},{% endif %}{% empty %}{{ cr.option_id }}{% endfor %}"
-               data-jour="{{ cellule.jour }}"
-               data-plage="{{ cellule.plage.id }}"
-               data-edit-url="{% url 'modifier_creneau_grille' cr.pk %}"
-               data-delete-url="{% url 'supprimer_creneau_grille' cr.pk %}"
-               data-move-url="{% url 'deplacer_creneau_grille' cr.pk %}"
-               data-copy-url="{% url 'copier_creneau_grille' cr.pk %}"
-               {% endif %}>
-            <div class="edt-card-body">
-              <div class="edt-cours-nom">{{ cr.cours.intitule }}</div>
-              <div class="edt-code-badge-line">{{ cr.reference_affichage }}</div>
-              {% if cr.cours.volumeHoraire %}
-              <div class="edt-volume">({{ cr.cours.volumeHoraire }})</div>
-              {% endif %}
-              <div class="edt-enseignant-line">{{ cr.enseignant.nom }} {{ cr.enseignant.prenom }}</div>
-              {% if not salle_id_actif %}
-              <div class="edt-meta-small"><i class="ti ti-building"></i> {{ cr.salle.nom }}</div>
-              {% endif %}
-            </div>
-          </div>
-          {% empty %}
-          {% if est_cd %}
-          <span class="edt-empty-marker" aria-hidden="true">
-            <i class="ti ti-plus"></i>
-          </span>
-          {% else %}
-          <span style="display:block;min-height:50px;"></span>
-          {% endif %}
-          {% endfor %}
-
-
-        </td>
-        {% endfor %}
-      </tr>
+{% if mode_multi_grilles %}
+  {% for bloc in salles_lignes %}
+  <section class="edt-salle-section" id="salle-{{ bloc.salle.pk }}">
+    <h2 class="edt-salle-title">
+      <i class="ti ti-building" aria-hidden="true"></i>
+      {{ bloc.salle.site }} — {{ bloc.salle.nom }}
+      {% if est_cd %}
+        {% if bloc.nb_creneaux %}
+        <span class="edt-salle-title-count">{{ bloc.nb_creneaux }} créneau{{ bloc.nb_creneaux|pluralize }}</span>
+        {% else %}
+        <span class="edt-salle-title-empty">Aucun créneau — à planifier</span>
+        {% endif %}
       {% endif %}
-    {% endfor %}
-  </tbody>
-</table>
+    </h2>
+    <div style="overflow-x:auto;">
+      {% include "emploi_du_temps/grille/_table.html" with lignes=bloc.lignes masquer_nom_salle=True salle_id_actif=bloc.salle.pk %}
+    </div>
+  </section>
+  {% empty %}
+  <p class="edt-empty-week">Aucun créneau publié pour cette semaine avec les filtres sélectionnés.</p>
+  {% endfor %}
+{% else %}
+<div style="overflow-x:auto;">
+  {% include "emploi_du_temps/grille/_table.html" %}
 </div>
+{% endif %}
 
 {% if est_cd %}
 <div class="edt-context-menu" id="edtContextMenu" role="menu" aria-hidden="true">
@@ -409,6 +367,41 @@
 .edt-volume{font-size:10px;color:#444;margin-bottom:3px;font-style:normal}
 .edt-enseignant-line{font-size:11px;color:#c51414;font-weight:700;margin-bottom:2px}
 .edt-meta-small{font-size:10px;color:var(--gray-500);line-height:1.5;display:flex;align-items:center;justify-content:center;gap:3px}
+.edt-salle-nav{
+  display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;
+  position:sticky;top:0;z-index:20;background:var(--gray-50, #fff);
+  padding:10px 0;border-bottom:1px solid var(--gray-200, #eee);
+}
+.edt-salle-nav-link{
+  display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:20px;
+  background:var(--blue-light);color:var(--blue);border:1px solid var(--blue-mid);
+  font-size:12.5px;font-weight:600;text-decoration:none;transition:all .15s;
+}
+.edt-salle-nav-link:hover{background:var(--blue);color:#fff}
+.edt-salle-nav-link.is-vide{
+  background:transparent;color:var(--gray-500);border:1px dashed var(--gray-300, #ccc);
+}
+.edt-salle-nav-link.is-vide:hover{background:var(--gray-100, #f2f2f2);color:var(--gray-700, #555)}
+.edt-salle-nav-count{
+  display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;
+  padding:0 4px;border-radius:8px;background:rgba(255,255,255,.6);font-size:10px;font-weight:700;
+}
+.edt-salle-nav-link:hover .edt-salle-nav-count{background:rgba(255,255,255,.3)}
+.edt-salle-section{margin-bottom:32px;scroll-margin-top:64px}
+.edt-salle-title{
+  display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;
+  color:var(--gray-900);margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid var(--blue-light);
+}
+.edt-salle-title i{color:var(--blue);font-size:18px}
+.edt-salle-title-count{
+  margin-left:auto;font-size:11px;font-weight:700;color:var(--blue);
+  background:var(--blue-light);padding:2px 8px;border-radius:10px;
+}
+.edt-salle-title-empty{
+  margin-left:auto;font-size:11px;font-weight:600;color:var(--gray-500);
+  border:1px dashed var(--gray-300, #ccc);padding:2px 8px;border-radius:10px;
+}
+.edt-empty-week{color:var(--gray-500);text-align:center;padding:32px 16px}
 .edt-option-badge{display:inline-block;background:var(--blue-light);color:var(--blue);font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px}
 .edt-empty-marker{position:absolute;inset:4px;display:flex;align-items:center;justify-content:center;color:var(--gray-300);font-size:20px;border:1.5px dashed var(--gray-200);border-radius:6px;background:transparent;pointer-events:none}
 .edt-pause-row td{border:2px solid #7030a0}
@@ -801,13 +794,13 @@ function allerSemaineDate(iso) {
 
     if (mode === 'draft') {
       publishTitle.textContent = 'Repasser en brouillon ?';
-      publishText.textContent = "Les enseignants et étudiants ne verront plus cette semaine comme version publiée. Vous pourrez la republier après modification.";
+      publishText.textContent = "Le public ne verra plus cette semaine comme version publiée. Vous pourrez la republier après modification.";
       publishIcon.innerHTML = '<i class="ti ti-rotate-clockwise"></i>';
       publishConfirm.className = 'btn btn-outline';
       publishConfirm.innerHTML = '<i class="ti ti-rotate-clockwise"></i> Repasser en brouillon';
     } else {
       publishTitle.textContent = 'Publier cette semaine ?';
-      publishText.textContent = "Les emplois du temps brouillons de cette semaine deviendront visibles pour les enseignants et les étudiants concernés.";
+      publishText.textContent = "Les emplois du temps brouillons de cette semaine deviendront visibles publiquement.";
       publishIcon.innerHTML = '<i class="ti ti-send"></i>';
       publishConfirm.className = 'btn btn-success';
       publishConfirm.innerHTML = '<i class="ti ti-send"></i> Publier';
